@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Set base URL for all requests
-axios.defaults.baseURL = 'http://localhost:5000';
+axios.defaults.baseURL = 'https://cozy-magic-production.up.railway.app';
 
 // Function to set auth token
 export const setAuthToken = (token) => {
