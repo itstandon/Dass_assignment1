@@ -1,5 +1,5 @@
 // src/components/ParticipantDashboard.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const ParticipantDashboard = () => {
@@ -8,21 +8,22 @@ const ParticipantDashboard = () => {
     const [activeTab, setActiveTab] = useState('all');
     const token = localStorage.getItem('token');
 
+    const fetchRegistrations = useCallback(async () => {
+        try {
+            const res = await axios.get('/api/registrations/user', {
+                headers: { 'x-auth-token': token }
+            });
+            setRegistrations(res.data);
+            setLoading(false);
+        } catch (err) {
+            console.error('Failed to fetch registrations', err);
+            setLoading(false);
+        }
+    }, [token]);
+
     useEffect(() => {
-        const fetchRegistrations = async () => {
-            try {
-                const res = await axios.get('/api/registrations/user', {
-                    headers: { 'x-auth-token': token }
-                });
-                setRegistrations(res.data);
-                setLoading(false);
-            } catch (err) {
-                console.error('Failed to fetch registrations', err);
-                setLoading(false);
-            }
-        };
         fetchRegistrations();
-    }, []);
+    }, [fetchRegistrations]);
 
     const handleCancelRegistration = async (eventId) => {
         if (!window.confirm('Cancel this registration?')) return;

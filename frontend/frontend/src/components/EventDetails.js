@@ -1,5 +1,18 @@
-// src/components/EventDetails.js
-import React, { useState, useEffect } from 'react';
+// src/compone    const token = localStorage.getItem('token');
+
+    const fetchEventDetails = useCallback(async () => {
+        try {
+            const res = await axios.get(`/api/events/${id}`);
+            setEvent(res.data);
+        } catch (err) {
+            console.error('Failed to fetch event details:', err);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        fetchEventDetails();
+    }, [fetchEventDetails]);ils.js
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 

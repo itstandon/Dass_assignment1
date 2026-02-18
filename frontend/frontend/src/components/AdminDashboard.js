@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import '../styles/AdminDashboard.css';
 
@@ -14,22 +14,23 @@ const AdminDashboard = () => {
     const [showForm, setShowForm] = useState(false);
     const token = localStorage.getItem('token');
 
+    const fetchOrganizers = useCallback(async () => {
+        try {
+            // Get all users with Organizer role
+            const res = await axios.get('/api/admin/organizers', {
+                headers: { 'x-auth-token': token }
+            });
+            setOrganizers(res.data);
+            setLoading(false);
+        } catch (err) {
+            console.error('Failed to fetch organizers', err);
+            setLoading(false);
+        }
+    }, [token]);
+
     useEffect(() => {
-        const fetchOrganizers = async () => {
-            try {
-                // Get all users with Organizer role
-                const res = await axios.get('/api/admin/organizers', {
-                    headers: { 'x-auth-token': token }
-                });
-                setOrganizers(res.data);
-                setLoading(false);
-            } catch (err) {
-                console.error('Failed to fetch organizers', err);
-                setLoading(false);
-            }
-        };
         fetchOrganizers();
-    }, []);
+    }, [fetchOrganizers]);
 
     const handleCreateOrganizer = async (e) => {
         e.preventDefault();

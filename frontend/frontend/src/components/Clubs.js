@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const Clubs = () => {
@@ -7,38 +7,38 @@ const Clubs = () => {
     const [followedClubs, setFollowedClubs] = useState([]);
     const token = localStorage.getItem('token');
 
+    const fetchOrganizers = useCallback(async () => {
+        try {
+            const res = await axios.get('/api/events');
+            const uniqueOrganizers = {};
+            res.data.forEach(event => {
+                if (event.organizer && !uniqueOrganizers[event.organizer._id]) {
+                    uniqueOrganizers[event.organizer._id] = event.organizer;
+                }
+            });
+            setOrganizers(Object.values(uniqueOrganizers));
+            setLoading(false);
+        } catch (err) {
+            console.error('Failed to fetch organizers', err);
+            setLoading(false);
+        }
+    }, []);
+
+    const fetchFollowedClubs = useCallback(async () => {
+        try {
+            const res = await axios.get('/api/user/preferences', {
+                headers: { 'x-auth-token': token }
+            });
+            setFollowedClubs(res.data.followedClubs || []);
+        } catch (err) {
+            console.error('Failed to fetch followed clubs', err);
+        }
+    }, [token]);
+
     useEffect(() => {
-        const fetchOrganizers = async () => {
-            try {
-                const res = await axios.get('/api/events');
-                const uniqueOrganizers = {};
-                res.data.forEach(event => {
-                    if (event.organizer && !uniqueOrganizers[event.organizer._id]) {
-                        uniqueOrganizers[event.organizer._id] = event.organizer;
-                    }
-                });
-                setOrganizers(Object.values(uniqueOrganizers));
-                setLoading(false);
-            } catch (err) {
-                console.error('Failed to fetch organizers', err);
-                setLoading(false);
-            }
-        };
-
-        const fetchFollowedClubs = async () => {
-            try {
-                const res = await axios.get('/api/user/preferences', {
-                    headers: { 'x-auth-token': token }
-                });
-                setFollowedClubs(res.data.followedClubs || []);
-            } catch (err) {
-                console.error('Failed to fetch followed clubs', err);
-            }
-        };
-
         fetchOrganizers();
         fetchFollowedClubs();
-    }, []);
+    }, [fetchOrganizers, fetchFollowedClubs]);
 
     const handleFollowClub = async (organizerId) => {
         try {

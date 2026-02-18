@@ -1,5 +1,5 @@
 // src/components/Profile.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const Profile = () => {
@@ -10,22 +10,23 @@ const Profile = () => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
 
+    const fetchUserProfile = useCallback(async () => {
+        try {
+            const res = await axios.get('/api/user/profile', {
+                headers: { 'x-auth-token': token }
+            });
+            setUser(res.data);
+            setFormData(res.data);
+            setLoading(false);
+        } catch (err) {
+            console.error('Failed to fetch profile', err);
+            setLoading(false);
+        }
+    }, [token]);
+
     useEffect(() => {
-        const fetchUserProfile = async () => {
-            try {
-                const res = await axios.get('/api/user/profile', {
-                    headers: { 'x-auth-token': token }
-                });
-                setUser(res.data);
-                setFormData(res.data);
-                setLoading(false);
-            } catch (err) {
-                console.error('Failed to fetch profile', err);
-                setLoading(false);
-            }
-        };
         fetchUserProfile();
-    }, []);
+    }, [fetchUserProfile]);
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
