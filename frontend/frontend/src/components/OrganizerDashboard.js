@@ -1,0 +1,192 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Container, Row, Col, Card, Button, Badge, Spinner, Alert } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+
+const OrganizerDashboard = () => {
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await axios.get('http://localhost:5000/api/events/organizer/my-events', {
+                    headers: { 'x-auth-token': token }
+                });
+                setEvents(res.data);
+                setLoading(false);
+            } catch (err) {
+                console.error('Error fetching events:', err);
+                setError('Failed to load events');
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+    }, []);
+
+    const categorizedEvents = {
+        Draft: events.filter(e => e.status === 'Draft' || !e.status),
+        Published: events.filter(e => e.status === 'Scheduled'),
+        Ongoing: events.filter(e => e.status === 'Ongoing'),
+        Completed: events.filter(e => e.status === 'Completed' || e.status === 'Cancelled')
+    };
+
+    // Calculate analytics from local events
+    const completedEvents = categorizedEvents.Completed;
+    let totalRegistrations = 0;
+    let totalRevenue = 0;
+    let totalAttended = 0;
+
+    completedEvents.forEach(event => {
+        if (event.registrations && Array.isArray(event.registrations)) {
+            totalRegistrations += event.registrations.length;
+            if (event.eventType === 'Normal') {
+                totalRevenue += (event.registrations.length * (event.registrationFee || 0));
+            } else if (event.eventType === 'Merchandise') {
+                totalRevenue += (event.registrations.length * (event.price || 0));
+            }
+        }
+    });
+
+    const overallAttendanceRate = totalRegistrations > 0 ? ((totalAttended / totalRegistrations) * 100).toFixed(2) : 0;
+
+    if (loading) return <Container className="text-center mt-5"><Spinner animation="border" /></Container>;
+    if (error) return <Container className="mt-5"><Alert variant="danger">{error}</Alert></Container>;
+
+    return (
+        <Container className="mt-4">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2>📊 Organizer Dashboard</h2>
+                <Button as={Link} to="/create-event" variant="primary">+ Create New Event</Button>
+            </div>
+
+            {/* ===== ANALYTICS SECTION (10.2) ===== */}
+            <section className="mb-5">
+                <h4 className="text-success mb-3">📈 Overall Statistics</h4>
+                <Row xs={1} md={2} lg={4} className="g-4">
+                    <Col>
+                        <Card className="text-center h-100 shadow-sm" style={{ borderLeft: '4px solid #28a745' }}>
+                            <Card.Body>
+                                <Card.Title className="small text-muted">Total Registrations</Card.Title>
+                                <h3 className="text-success">{totalRegistrations}</h3>
+                                <Card.Text className="small">From all completed events</Card.Text>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+
+                    <Col>
+                        <Card className="text-center h-100 shadow-sm" style={{ borderLeft: '4px solid #17a2b8' }}>
+                            <Card.Body>
+                                <Card.Title className="small text-muted">Total Revenue</Card.Title>
+                                <h3 className="text-info">₹{totalRevenue.toLocaleString()}</h3>
+                                <Card.Text className="small">Across all events</Card.Text>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+
+                    <Col>
+                        <Card className="text-center h-100 shadow-sm" style={{ borderLeft: '4px solid #ffc107' }}>
+                            <Card.Body>
+                                <Card.Title className="small text-muted">Attendance Rate</Card.Title>
+                                <h3 className="text-warning">{overallAttendanceRate}%</h3>
+                                <Card.Text className="small">{totalAttended} / {totalRegistrations} attended</Card.Text>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+
+                    <Col>
+                        <Card className="text-center h-100 shadow-sm" style={{ borderLeft: '4px solid #007bff' }}>
+                            <Card.Body>
+                                <Card.Title className="small text-muted">All Events</Card.Title>
+                                <h3 className="text-primary">{events.length}</h3>
+                                <Card.Text className="small">
+                                    <span className="badge bg-success me-1">{categorizedEvents.Ongoing.length} Ongoing</span>
+                                    <span className="badge bg-secondary">{completedEvents.length} Completed</span>
+                                </Card.Text>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+            </section>
+
+            {/* ===== ONGOING EVENTS SECTION ===== */}
+            {categorizedEvents.Ongoing.length > 0 && (
+                <section className="mb-5">
+                    <h4 className="text-danger mb-3">🔔 Ongoing Events</h4>
+                    <Row xs={1} md={2} lg={3} className="g-4">
+                        {categorizedEvents.Ongoing.map(event => (
+                            <Col key={event._id}>
+                                <EventCard event={event} />
+                            </Col>
+                        ))}
+                    </Row>
+                </section>
+            )}
+
+            {/* ===== SCHEDULED EVENTS SECTION ===== */}
+            <section className="mb-5">
+                <h4 className="mb-3">📅 Upcoming / Published Events</h4>
+                {categorizedEvents.Published.length > 0 ? (
+                    <Row xs={1} md={2} lg={3} className="g-4">
+                        {categorizedEvents.Published.map(event => (
+                            <Col key={event._id}>
+                                <EventCard event={event} />
+                            </Col>
+                        ))}
+                    </Row>
+                ) : <p className="text-muted">No upcoming events scheduled.</p>}
+            </section>
+
+            {/* ===== COMPLETED EVENTS SECTION ===== */}
+            <section className="mb-5">
+                <h4 className="mb-3 text-muted">📜 Past Events</h4>
+                {completedEvents.length > 0 ? (
+                    <Row xs={1} md={2} lg={3} className="g-4">
+                        {completedEvents.map(event => (
+                            <Col key={event._id}>
+                                <EventCard event={event} isPast />
+                            </Col>
+                        ))}
+                    </Row>
+                ) : <p className="text-muted">No past events found.</p>}
+            </section>
+        </Container>
+    );
+};
+
+const EventCard = ({ event, isPast }) => (
+    <Card className={`h-100 shadow-sm ${isPast ? 'bg-light' : ''}`}>
+        <Card.Body>
+            <div className="d-flex justify-content-between align-items-start mb-2">
+                <Badge bg={event.eventType === 'Normal' ? 'info' : 'warning'}>{event.eventType}</Badge>
+                <Badge bg={getStatusVariant(event.status)}>{event.status}</Badge>
+            </div>
+            <Card.Title>{event.title}</Card.Title>
+            <Card.Text className="text-muted small mb-2">
+                {new Date(event.startDate).toLocaleDateString()}
+            </Card.Text>
+            <Card.Text className="text-truncate">
+                {event.description}
+            </Card.Text>
+        </Card.Body>
+        <Card.Footer className="bg-white border-top-0 d-flex justify-content-between gap-2">
+            <Link to={`/event/${event._id}/details`} className="btn btn-outline-primary btn-sm flex-grow-1">📋 Details</Link>
+            <Link to={`/event/${event._id}/analytics`} className="btn btn-dark btn-sm flex-grow-1">📊 Analytics</Link>
+        </Card.Footer>
+    </Card>
+);
+
+const getStatusVariant = (status) => {
+    switch (status) {
+        case 'Scheduled': return 'success';
+        case 'Ongoing': return 'danger';
+        case 'Completed': return 'secondary';
+        case 'Cancelled': return 'dark';
+        default: return 'secondary';
+    }
+};
+
+export default OrganizerDashboard;
