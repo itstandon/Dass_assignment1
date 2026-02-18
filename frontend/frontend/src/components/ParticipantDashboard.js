@@ -9,21 +9,20 @@ const ParticipantDashboard = () => {
     const token = localStorage.getItem('token');
 
     useEffect(() => {
+        const fetchRegistrations = async () => {
+            try {
+                const res = await axios.get('/api/registrations/user', {
+                    headers: { 'x-auth-token': token }
+                });
+                setRegistrations(res.data);
+                setLoading(false);
+            } catch (err) {
+                console.error('Failed to fetch registrations', err);
+                setLoading(false);
+            }
+        };
         fetchRegistrations();
     }, []);
-
-    const fetchRegistrations = async () => {
-        try {
-            const res = await axios.get('/api/registrations/user', {
-                headers: { 'x-auth-token': token }
-            });
-            setRegistrations(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error('Failed to fetch registrations', err);
-            setLoading(false);
-        }
-    };
 
     const handleCancelRegistration = async (eventId) => {
         if (!window.confirm('Cancel this registration?')) return;

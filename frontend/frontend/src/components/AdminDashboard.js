@@ -15,22 +15,21 @@ const AdminDashboard = () => {
     const token = localStorage.getItem('token');
 
     useEffect(() => {
+        const fetchOrganizers = async () => {
+            try {
+                // Get all users with Organizer role
+                const res = await axios.get('/api/admin/organizers', {
+                    headers: { 'x-auth-token': token }
+                });
+                setOrganizers(res.data);
+                setLoading(false);
+            } catch (err) {
+                console.error('Failed to fetch organizers', err);
+                setLoading(false);
+            }
+        };
         fetchOrganizers();
     }, []);
-
-    const fetchOrganizers = async () => {
-        try {
-            // Get all users with Organizer role
-            const res = await axios.get('/api/admin/organizers', {
-                headers: { 'x-auth-token': token }
-            });
-            setOrganizers(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error('Failed to fetch organizers', err);
-            setLoading(false);
-        }
-    };
 
     const handleCreateOrganizer = async (e) => {
         e.preventDefault();

@@ -11,22 +11,21 @@ const Profile = () => {
     const role = localStorage.getItem('role');
 
     useEffect(() => {
+        const fetchUserProfile = async () => {
+            try {
+                const res = await axios.get('/api/user/profile', {
+                    headers: { 'x-auth-token': token }
+                });
+                setUser(res.data);
+                setFormData(res.data);
+                setLoading(false);
+            } catch (err) {
+                console.error('Failed to fetch profile', err);
+                setLoading(false);
+            }
+        };
         fetchUserProfile();
     }, []);
-
-    const fetchUserProfile = async () => {
-        try {
-            const res = await axios.get('/api/user/profile', {
-                headers: { 'x-auth-token': token }
-            });
-            setUser(res.data);
-            setFormData(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error('Failed to fetch profile', err);
-            setLoading(false);
-        }
-    };
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();

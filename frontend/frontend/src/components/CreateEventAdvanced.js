@@ -257,7 +257,7 @@ const CreateEventAdvanced = () => {
                 };
             }
 
-            const response = await axios.post('/api/events/create', payload, {
+            await axios.post('/api/events/create', payload, {
                 headers: { 'x-auth-token': token }
             });
 

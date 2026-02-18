@@ -15,17 +15,16 @@ const EventDetails = () => {
     const token = localStorage.getItem('token');
 
     useEffect(() => {
+        const fetchEventDetails = async () => {
+            try {
+                const res = await axios.get(`/api/events/${id}`);
+                setEvent(res.data);
+            } catch (err) {
+                console.error('Failed to fetch event details:', err);
+            }
+        };
         fetchEventDetails();
     }, [id]);
-
-    const fetchEventDetails = async () => {
-        try {
-            const res = await axios.get(`/api/events/${id}`);
-            setEvent(res.data);
-        } catch (err) {
-            console.error('Failed to fetch event details:', err);
-        }
-    };
 
     const handleRegisterEvent = async () => {
         if (!token) {
