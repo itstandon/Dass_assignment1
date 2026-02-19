@@ -20,6 +20,50 @@ const EventList = () => {
         fetchTrending();
     }, []);
 
+    const fetchEvents = async () => {
+        try {
+            setLoading(true);
+            const res = await axios.get('/api/events');
+            setEvents(res.data);
+        } catch (err) {
+            console.error('Failed to fetch events:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchTrending = async () => {
+        try {
+            const res = await axios.get('/api/events/trending');
+            setTrendingEvents(res.data);
+        } catch (err) {
+            console.error('Failed to fetch trending:', err);
+        }
+    };
+
+    const fetchFollowedClubs = async () => {
+        try {
+            const res = await axios.get('/api/user/preferences', {
+                headers: { 'x-auth-token': token }
+            });
+            setFollowedClubs(res.data.followedClubs || []);
+        } catch (err) {
+            console.error('Failed to fetch followed clubs', err);
+        }
+    };
+
+    const fuzzyMatch = (text, query) => {
+        const q = query.toLowerCase();
+        const t = text.toLowerCase();
+        if (t.includes(q)) return true;
+
+        let qIdx = 0;
+        for (let tIdx = 0; tIdx < t.length && qIdx < q.length; tIdx++) {
+            if (t[tIdx] === q[qIdx]) qIdx++;
+        }
+        return qIdx === q.length;
+    };
+
     const applyFiltersAndSearch = useCallback(() => {
         let result = events;
 
