@@ -9,48 +9,26 @@ const EventList = () => {
     const [filter, setFilter] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
-    const [followedClubs, setFollowedClubs] = useState([]);
     const [trendingEvents, setTrendingEvents] = useState([]);
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
+
+    const fetchFollowedClubs = useCallback(async () => {
+        try {
+            const res = await axios.get('/api/user/preferences', {
+                headers: { 'x-auth-token': token }
+            });
+            // Just fetch but don't store - we don't use followedClubs state
+        } catch (err) {
+            console.error('Failed to fetch followed clubs', err);
+        }
+    }, [token]);
 
     useEffect(() => {
         fetchEvents();
         fetchFollowedClubs();
         fetchTrending();
-    }, []);
-
-    const fetchEvents = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get('/api/events');
-            setEvents(res.data);
-        } catch (err) {
-            console.error('Failed to fetch events:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchTrending = async () => {
-        try {
-            const res = await axios.get('/api/events/trending');
-            setTrendingEvents(res.data);
-        } catch (err) {
-            console.error('Failed to fetch trending:', err);
-        }
-    };
-
-    const fetchFollowedClubs = async () => {
-        try {
-            const res = await axios.get('/api/user/preferences', {
-                headers: { 'x-auth-token': token }
-            });
-            setFollowedClubs(res.data.followedClubs || []);
-        } catch (err) {
-            console.error('Failed to fetch followed clubs', err);
-        }
-    };
+    }, [fetchFollowedClubs]);
 
     const fuzzyMatch = (text, query) => {
         const q = query.toLowerCase();
@@ -100,7 +78,26 @@ const EventList = () => {
         applyFiltersAndSearch();
     }, [applyFiltersAndSearch]);
 
-    if (loading) return <div style={{ padding: '20px' }}>Loading events...</div>;
+    const fetchEvents = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await axios.get('/api/events');
+            setEvents(res.data);
+        } catch (err) {
+            console.error('Failed to fetch events:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const fetchTrending = useCallback(async () => {
+        try {
+            const res = await axios.get('/api/events/trending');
+            setTrendingEvents(res.data);
+        } catch (err) {
+            console.error('Failed to fetch trending:', err);
+        }
+    }, []);
 
     if (loading) return <div style={{ padding: '20px' }}>Loading events...</div>;
 
