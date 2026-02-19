@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,55 +20,7 @@ const EventList = () => {
         fetchTrending();
     }, []);
 
-    useEffect(() => {
-        applyFiltersAndSearch();
-    }, [events, filter, searchQuery, dateRange, followedClubs]);
-
-    const fetchEvents = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get('http://localhost:5000/api/events');
-            setEvents(res.data);
-        } catch (err) {
-            console.error('Failed to fetch events:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchTrending = async () => {
-        try {
-            const res = await axios.get('http://localhost:5000/api/events/trending');
-            setTrendingEvents(res.data);
-        } catch (err) {
-            console.error('Failed to fetch trending:', err);
-        }
-    };
-
-    const fetchFollowedClubs = async () => {
-        try {
-            const res = await axios.get('/api/user/preferences', {
-                headers: { 'x-auth-token': token }
-            });
-            setFollowedClubs(res.data.followedClubs || []);
-        } catch (err) {
-            console.error('Failed to fetch followed clubs', err);
-        }
-    };
-
-    const fuzzyMatch = (text, query) => {
-        const q = query.toLowerCase();
-        const t = text.toLowerCase();
-        if (t.includes(q)) return true;
-
-        let qIdx = 0;
-        for (let tIdx = 0; tIdx < t.length && qIdx < q.length; tIdx++) {
-            if (t[tIdx] === q[qIdx]) qIdx++;
-        }
-        return qIdx === q.length;
-    };
-
-    const applyFiltersAndSearch = () => {
+    const applyFiltersAndSearch = useCallback(() => {
         let result = events;
 
         // Search filter
@@ -98,13 +50,11 @@ const EventList = () => {
         result = result.sort((a, b) => (b.registrations?.length || 0) - (a.registrations?.length || 0));
 
         setFilteredEvents(result);
-    };
+    }, [events, filter, searchQuery, dateRange]);
 
-    const getTrendingEvents = () => {
-        return [...events]
-            .sort((a, b) => (b.registrations?.length || 0) - (a.registrations?.length || 0))
-            .slice(0, 5);
-    };
+    useEffect(() => {
+        applyFiltersAndSearch();
+    }, [applyFiltersAndSearch]);
 
     if (loading) return <div style={{ padding: '20px' }}>Loading events...</div>;
 

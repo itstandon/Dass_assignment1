@@ -78,11 +78,6 @@ const EventDetails = () => {
                     headers: { 'x-auth-token': token }
                 }
             );
-
-            // Get QR code data
-            const qrData = response.data.registration.qrCode;
-            const qrObject = typeof qrData === 'string' ? JSON.parse(qrData) : qrData;
-            const qrImage = response.data.qrCodeImage;
             
             // Show success alert
             alert(`✅ PURCHASE SUCCESSFUL!\n\n📋 TICKET ID: ${response.data.ticketId}\n💰 TOTAL: ₹${response.data.totalAmount}\n\n✉️ Check your email for QR code image!`);
