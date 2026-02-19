@@ -1,17 +1,3 @@
-// src/compone    const token = localStorage.getItem('token');
-
-    const fetchEventDetails = useCallback(async () => {
-        try {
-            const res = await axios.get(`/api/events/${id}`);
-            setEvent(res.data);
-        } catch (err) {
-            console.error('Failed to fetch event details:', err);
-        }
-    }, [id]);
-
-    useEffect(() => {
-        fetchEventDetails();
-    }, [fetchEventDetails]);ils.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -27,17 +13,18 @@ const EventDetails = () => {
     const [formResponses, setFormResponses] = useState({});
     const token = localStorage.getItem('token');
 
-    useEffect(() => {
-        const fetchEventDetails = async () => {
-            try {
-                const res = await axios.get(`/api/events/${id}`);
-                setEvent(res.data);
-            } catch (err) {
-                console.error('Failed to fetch event details:', err);
-            }
-        };
-        fetchEventDetails();
+    const fetchEventDetails = useCallback(async () => {
+        try {
+            const res = await axios.get(`/api/events/${id}`);
+            setEvent(res.data);
+        } catch (err) {
+            console.error('Failed to fetch event details:', err);
+        }
     }, [id]);
+
+    useEffect(() => {
+        fetchEventDetails();
+    }, [fetchEventDetails]);
 
     const handleRegisterEvent = async () => {
         if (!token) {
