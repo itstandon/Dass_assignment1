@@ -17,7 +17,7 @@ const EventAnalytics = () => {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('Not authenticated');
 
-                const res = await axios.get(`http://localhost:5000/api/events/${id}/participants`, {
+                const res = await axios.get(`/api/events/${id}/participants`, {
                     headers: { 'x-auth-token': token }
                 });
 

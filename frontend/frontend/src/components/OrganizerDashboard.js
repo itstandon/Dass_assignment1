@@ -12,7 +12,7 @@ const OrganizerDashboard = () => {
         const fetchEvents = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get('http://localhost:5000/api/events/organizer/my-events', {
+                const res = await axios.get('/api/events/organizer/my-events', {
                     headers: { 'x-auth-token': token }
                 });
                 setEvents(res.data);
