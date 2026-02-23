@@ -24,12 +24,14 @@ router.get('/organizer/:id/events', auth, async (req, res) => {
     // Get all events for a specific organizer (for participant view)
     try {
         const Event = require('../models/Event');
+        console.log('Fetching events for organizer:', req.params.id);
         const events = await Event.find({ organizer: req.params.id })
             .populate('organizer', 'organizerName')
             .sort({ date: 1 });
+        console.log(`Found ${events.length} events for organizer ${req.params.id}`);
         res.json(events);
     } catch (err) {
-        console.error(err.message);
+        console.error('Error fetching organizer events:', err.message);
         res.status(500).send('Server Error');
     }
 });
