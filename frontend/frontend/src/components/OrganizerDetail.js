@@ -8,27 +8,45 @@ const OrganizerDetail = () => {
     const [upcomingEvents, setUpcomingEvents] = useState([]);
     const [pastEvents, setPastEvents] = useState([]);
     const [activeTab, setActiveTab] = useState('upcoming');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const token = localStorage.getItem('token');
 
     useEffect(() => {
-        // Fetch organizer details
-        axios.get(`/api/user/organizers/${id}`, {
-            headers: { 'x-auth-token': token }
-        }).then(res => setOrganizer(res.data));
+        const fetchData = async () => {
+            try {
+                // Fetch organizer details
+                const orgRes = await axios.get(`/api/user/organizers/${id}`, {
+                    headers: { 'x-auth-token': token }
+                });
+                console.log('Organizer:', orgRes.data);
+                setOrganizer(orgRes.data);
 
-        // Fetch organizer's events
-        axios.get(`/api/events/organizer/${id}/events`, {
-            headers: { 'x-auth-token': token }
-        }).then(res => {
-            const now = new Date();
-            const upcoming = res.data.filter(event => new Date(event.date) >= now);
-            const past = res.data.filter(event => new Date(event.date) < now);
-            setUpcomingEvents(upcoming);
-            setPastEvents(past);
-        });
-    }, [id]);
+                // Fetch organizer's events
+                const eventsRes = await axios.get(`/api/events/organizer/${id}/events`, {
+                    headers: { 'x-auth-token': token }
+                });
+                console.log('Events:', eventsRes.data);
+                
+                const now = new Date();
+                const upcoming = eventsRes.data.filter(event => new Date(event.date) >= now);
+                const past = eventsRes.data.filter(event => new Date(event.date) < now);
+                setUpcomingEvents(upcoming);
+                setPastEvents(past);
+                setLoading(false);
+            } catch (err) {
+                console.error('Error fetching organizer details:', err);
+                setError(err.response?.data?.msg || 'Failed to load organizer details');
+                setLoading(false);
+            }
+        };
 
-    if (!organizer) return <div style={{ padding: '20px' }}>Loading...</div>;
+        fetchData();
+    }, [id, token]);
+
+    if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
+    if (error) return <div style={{ padding: '20px', color: 'red' }}>Error: {error}</div>;
+    if (!organizer) return <div style={{ padding: '20px' }}>Organizer not found</div>;
 
     return (
         <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
