@@ -54,7 +54,7 @@
 ### 1. Merchandise Payment Approval Workflow [8 Marks]
 - Backend: Payment proof upload, approve/reject endpoints
 - Frontend: Upload component, approval dashboard, payment instructions
-- Models: Registration with payment proof fields, Event with payment instructions
+- Models: Registration with payment proof fields, Event with payment instructi![alt text](image.png)ons
 
 ### 2. Organizer Password Reset Workflow [6 Marks - Tier B]
 - Backend: Request, approve/reject with auto-generated passwords

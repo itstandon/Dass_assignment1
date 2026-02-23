@@ -39,11 +39,58 @@ const Login = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input type="email" placeholder="Email" onChange={e => setFormData({...formData, email: e.target.value})} />
-      <input type="password" placeholder="Password" onChange={e => setFormData({...formData, password: e.target.value})} />
-      <button type="submit">Login</button>
-    </form>
+    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
+      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Login</h2>
+      
+      {/* Register Button */}
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <button
+          type="button"
+          onClick={() => navigate('/register')}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '16px'
+          }}
+        >
+          📝 Create New Account
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <input 
+          type="email" 
+          placeholder="Email" 
+          onChange={e => setFormData({...formData, email: e.target.value})}
+          style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '4px', border: '1px solid #ddd' }}
+        />
+        <input 
+          type="password" 
+          placeholder="Password" 
+          onChange={e => setFormData({...formData, password: e.target.value})}
+          style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '4px', border: '1px solid #ddd' }}
+        />
+        <button 
+          type="submit"
+          style={{
+            width: '100%',
+            padding: '12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '16px'
+          }}
+        >
+          Login
+        </button>
+      </form>
+    </div>
   );
 };
 
