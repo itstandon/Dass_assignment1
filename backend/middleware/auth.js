@@ -1,11 +1,23 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const auth = (req, res, next) => {
+const auth = async (req, res, next) => {
     const token = req.header('x-auth-token');
     if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // Check if user is archived (Section 11.2)
+        const user = await User.findById(decoded.user.id).select('-password');
+        if (!user) {
+            return res.status(401).json({ msg: 'User not found' });
+        }
+        
+        if (user.isArchived) {
+            return res.status(403).json({ msg: 'Account has been archived. Please contact admin.' });
+        }
+        
         req.user = decoded.user;
         next();
     } catch (err) {
@@ -13,7 +25,7 @@ const auth = (req, res, next) => {
     }
 };
 
-const isAdmin = (req, res, next) => {
+const isAdmin = async (req, res, next) => {
     const token = req.header('x-auth-token'); // JWT-based auth is mandatory [cite: 43]
     if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
 
@@ -29,8 +41,8 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-const isOrganizer = (req, res, next) => {
-    auth(req, res, () => {
+const isOrganizer = async (req, res, next) => {
+    await auth(req, res, async () => {
         if (req.user.role !== 'Organizer') {
             return res.status(403).json({ msg: 'Access denied: Organizers only' });
         }
@@ -38,8 +50,8 @@ const isOrganizer = (req, res, next) => {
     });
 };
 
-const isParticipant = (req, res, next) => {
-    auth(req, res, () => {
+const isParticipant = async (req, res, next) => {
+    await auth(req, res, async () => {
         if (req.user.role !== 'Participant') {
             return res.status(403).json({ msg: 'Access denied: Participants only' });
         }

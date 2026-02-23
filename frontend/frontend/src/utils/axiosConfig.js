@@ -18,4 +18,28 @@ if (token) {
   setAuthToken(token);
 }
 
+// Add response interceptor to handle archived accounts
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // If account is archived (403) or token invalid (401), logout user
+    if (error.response && (error.response.status === 403 || error.response.status === 401)) {
+      const errorMsg = error.response.data?.msg || '';
+      
+      // Check if it's an archived account error
+      if (errorMsg.includes('archived') || errorMsg.includes('Token is not valid')) {
+        // Clear auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        setAuthToken(null);
+        
+        // Redirect to login with error message
+        alert(errorMsg || 'Session expired. Please login again.');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default axios;
