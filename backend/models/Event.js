@@ -189,6 +189,14 @@ const EventSchema = new mongoose.Schema({
         required: function() { return this.eventType === 'Merchandise'; }
     },
 
+    // Payment Instructions for Merchandise (Payment Approval Feature)
+    paymentInstructions: {
+        upiId: String,
+        accountNumber: String,
+        accountHolderName: String,
+        additionalNotes: String // e.g., "Pay to club treasurer at Room 123"
+    },
+
     // ==================== COMMON FIELDS ====================
     // Event Status
     status: {

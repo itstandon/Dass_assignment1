@@ -117,6 +117,13 @@ exports.createEvent = async (req, res) => {
                 });
             }
 
+            // Validate payment instructions (required for merchandise)
+            if (!req.body.paymentInstructions || !req.body.paymentInstructions.upiId) {
+                return res.status(400).json({
+                    msg: 'Merchandise events require payment instructions with UPI ID'
+                });
+            }
+
             // Validate merchandise items structure
             for (let item of merchandiseItems) {
                 if (!item.name || !Array.isArray(item.size) || !Array.isArray(item.color) || !Array.isArray(item.variants)) {
@@ -169,6 +176,8 @@ exports.createEvent = async (req, res) => {
             eventData.price = price;
             eventData.merchandiseType = merchandiseType;
             eventData.quantity = quantity;
+            // Add payment instructions for merchandise events
+            eventData.paymentInstructions = req.body.paymentInstructions;
         }
 
         const event = new Event(eventData);

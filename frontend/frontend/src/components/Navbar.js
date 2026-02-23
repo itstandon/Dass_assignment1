@@ -39,6 +39,7 @@ const Navbar = () => {
                         <Link to="/organizer-dashboard" style={linkStyle}>Dashboard</Link>
                         <Link to="/create-event" style={linkStyle}>Create Event</Link>
                         <Link to="/ongoing-events" style={linkStyle}>Ongoing Events</Link>
+                        <Link to="/password-reset" style={linkStyle}>Password Reset</Link>
                         <Link to="/profile" style={linkStyle}>Profile</Link>
                     </>
                 )}

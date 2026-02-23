@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Button, Table, Alert, Spinner, Form, InputGroup } from 'react-bootstrap';
+import PaymentApprovalDashboard from './PaymentApprovalDashboard';
+import DiscussionForum from './DiscussionForum';
 
 const OrganizerEventDetails = () => {
     const { id } = useParams();
@@ -14,6 +16,12 @@ const OrganizerEventDetails = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
+    const [activeTab, setActiveTab] = useState('overview'); // New: tabs for overview | participants | payments
+    const [isEditing, setIsEditing] = useState(false);
+    const [editFormData, setEditFormData] = useState({});
+    const [updateLoading, setUpdateLoading] = useState(false);
+    const [updateError, setUpdateError] = useState(null);
+    const [updateSuccess, setUpdateSuccess] = useState(false);
 
     useEffect(() => {
         const fetchEventDetails = async () => {
@@ -21,13 +29,14 @@ const OrganizerEventDetails = () => {
                 const token = localStorage.getItem('token');
 
                 // Fetch event details
-                const eventRes = await axios.get(`http://localhost:5000/api/events/${id}`, {
+                const eventRes = await axios.get(`/api/events/${id}`, {
                     headers: { 'x-auth-token': token }
                 });
                 setEvent(eventRes.data);
+                setEditFormData(eventRes.data); // Initialize edit form with current data
 
                 // Fetch analytics and participants
-                const analyticsRes = await axios.get(`http://localhost:5000/api/events/${id}/participants`, {
+                const analyticsRes = await axios.get(`/api/events/${id}/participants`, {
                     headers: { 'x-auth-token': token }
                 });
                 setAnalytics(analyticsRes.data.analytics);
@@ -98,6 +107,62 @@ const OrganizerEventDetails = () => {
         document.body.removeChild(link);
     };
 
+    const handleEditToggle = () => {
+        if (isEditing) {
+            // Reset form data to original event data
+            setEditFormData(event);
+            setUpdateError(null);
+            setUpdateSuccess(false);
+        }
+        setIsEditing(!isEditing);
+    };
+
+    const handleEditChange = (e) => {
+        const { name, value } = e.target;
+        setEditFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handlePaymentInstructionsChange = (e) => {
+        const { name, value } = e.target;
+        setEditFormData(prev => ({
+            ...prev,
+            paymentInstructions: {
+                ...prev.paymentInstructions,
+                [name]: value
+            }
+        }));
+    };
+
+    const handleUpdateEvent = async (e) => {
+        e.preventDefault();
+        setUpdateLoading(true);
+        setUpdateError(null);
+        setUpdateSuccess(false);
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.put(`/api/events/${id}`, editFormData, {
+                headers: { 'x-auth-token': token }
+            });
+
+            setEvent(response.data);
+            setEditFormData(response.data);
+            setUpdateSuccess(true);
+            setIsEditing(false);
+            
+            // Clear success message after 3 seconds
+            setTimeout(() => setUpdateSuccess(false), 3000);
+        } catch (err) {
+            console.error(err);
+            setUpdateError(err.response?.data?.msg || 'Failed to update event');
+        } finally {
+            setUpdateLoading(false);
+        }
+    };
+
     if (loading) return <Container className="mt-5 text-center"><Spinner animation="border" /></Container>;
     if (error) return <Container className="mt-5"><Alert variant="danger">{error}</Alert></Container>;
     if (!event) return <Container className="mt-5"><Alert variant="warning">Event not found</Alert></Container>;
@@ -114,39 +179,352 @@ const OrganizerEventDetails = () => {
                         <Badge bg="secondary">{event.eligibility}</Badge>
                     </div>
                 </div>
-                <Button variant="outline-secondary" onClick={() => navigate('/organizer-dashboard')}>← Back to Dashboard</Button>
+                <div className="d-flex gap-2">
+                    <Button variant="outline-secondary" onClick={() => navigate('/organizer-dashboard')}>← Back to Dashboard</Button>
+                    <Button 
+                        variant={isEditing ? 'secondary' : 'primary'} 
+                        onClick={handleEditToggle}
+                    >
+                        {isEditing ? '✖ Cancel Edit' : '✏️ Edit Event'}
+                    </Button>
+                    <Button variant="success" onClick={() => navigate(`/event/${id}/scanner`)}>📱 Scan QR Code</Button>
+                    <Button variant="info" onClick={() => navigate(`/event/${id}/attendance`)}>📊 View Attendance</Button>
+                </div>
             </div>
 
-            {/* ===== OVERVIEW SECTION (10.3) ===== */}
-            <section className="mb-5">
-                <h4 className="mb-3">📋 Event Overview</h4>
-                <Row xs={1} md={2} lg={3} className="g-3">
-                    <Col>
-                        <Card className="h-100 shadow-sm">
-                            <Card.Body>
-                                <Card.Title className="small text-muted">Type</Card.Title>
-                                <p className="mb-0"><strong>{event.eventType}</strong></p>
-                            </Card.Body>
-                        </Card>
-                    </Col>
+            {/* ===== UPDATE SUCCESS/ERROR MESSAGES ===== */}
+            {updateSuccess && <Alert variant="success">✅ Event updated successfully!</Alert>}
+            {updateError && <Alert variant="danger">{updateError}</Alert>}
 
-                    <Col>
-                        <Card className="h-100 shadow-sm">
-                            <Card.Body>
-                                <Card.Title className="small text-muted">Status</Card.Title>
-                                <p className="mb-0"><Badge bg={getStatusBg(event.status)}>{event.status}</Badge></p>
-                            </Card.Body>
-                        </Card>
-                    </Col>
+            {/* ===== TAB NAVIGATION ===== */}
+            <div className="mb-4" style={{ borderBottom: '2px solid #ddd' }}>
+                <div className="d-flex gap-2">
+                    <Button 
+                        variant={activeTab === 'overview' ? 'primary' : 'outline-secondary'}
+                        onClick={() => setActiveTab('overview')}
+                        style={{ borderRadius: '4px 4px 0 0' }}
+                    >
+                        📋 Overview
+                    </Button>
+                    <Button 
+                        variant={activeTab === 'participants' ? 'primary' : 'outline-secondary'}
+                        onClick={() => setActiveTab('participants')}
+                        style={{ borderRadius: '4px 4px 0 0' }}
+                    >
+                        👥 Participants ({participants.length})
+                    </Button>
+                    {event.eventType === 'Merchandise' && (
+                        <Button 
+                            variant={activeTab === 'payments' ? 'primary' : 'outline-secondary'}
+                            onClick={() => setActiveTab('payments')}
+                            style={{ borderRadius: '4px 4px 0 0' }}
+                        >
+                            💳 Payment Approvals
+                        </Button>
+                    )}
+                    <Button 
+                        variant={activeTab === 'forum' ? 'primary' : 'outline-secondary'}
+                        onClick={() => setActiveTab('forum')}
+                        style={{ borderRadius: '4px 4px 0 0' }}
+                    >
+                        💬 Discussion Forum
+                    </Button>
+                </div>
+            </div>
 
-                    <Col>
-                        <Card className="h-100 shadow-sm">
+            {/* ===== TAB CONTENT ===== */}
+            {activeTab === 'payments' && event.eventType === 'Merchandise' && (
+                <PaymentApprovalDashboard eventId={id} />
+            )}
+
+            {activeTab === 'forum' && (
+                <DiscussionForum eventId={id} />
+            )}
+
+            {/* Show overview section when overview tab is active */}
+            {activeTab === 'overview' && (
+                <section className="mb-5">
+                    {/* ===== EDIT FORM ===== */}
+                    {isEditing ? (
+                        <Card className="mb-4 shadow">
+                            <Card.Header className="bg-primary text-white">
+                                <h5 className="mb-0">✏️ Edit Event</h5>
+                            </Card.Header>
                             <Card.Body>
-                                <Card.Title className="small text-muted">Eligibility</Card.Title>
-                                <p className="mb-0"><strong>{event.eligibility}</strong></p>
+                                <Form onSubmit={handleUpdateEvent}>
+                                    <Row>
+                                        <Col md={6}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>Title</Form.Label>
+                                                <Form.Control
+                                                    type="text"
+                                                    name="title"
+                                                    value={editFormData.title || ''}
+                                                    onChange={handleEditChange}
+                                                    required
+                                                />
+                                            </Form.Group>
+                                        </Col>
+                                        <Col md={6}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>Status</Form.Label>
+                                                <Form.Select
+                                                    name="status"
+                                                    value={editFormData.status || ''}
+                                                    onChange={handleEditChange}
+                                                >
+                                                    <option value="Open">Open</option>
+                                                    <option value="Closed">Closed</option>
+                                                    <option value="Cancelled">Cancelled</option>
+                                                    <option value="Completed">Completed</option>
+                                                </Form.Select>
+                                            </Form.Group>
+                                        </Col>
+                                    </Row>
+
+                                    <Form.Group className="mb-3">
+                                        <Form.Label>Description</Form.Label>
+                                        <Form.Control
+                                            as="textarea"
+                                            rows={3}
+                                            name="description"
+                                            value={editFormData.description || ''}
+                                            onChange={handleEditChange}
+                                        />
+                                    </Form.Group>
+
+                                    <Row>
+                                        <Col md={4}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>Registration Deadline</Form.Label>
+                                                <Form.Control
+                                                    type="datetime-local"
+                                                    name="registrationDeadline"
+                                                    value={editFormData.registrationDeadline ? new Date(editFormData.registrationDeadline).toISOString().slice(0, 16) : ''}
+                                                    onChange={handleEditChange}
+                                                />
+                                            </Form.Group>
+                                        </Col>
+                                        <Col md={4}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>Start Date</Form.Label>
+                                                <Form.Control
+                                                    type="datetime-local"
+                                                    name="startDate"
+                                                    value={editFormData.startDate ? new Date(editFormData.startDate).toISOString().slice(0, 16) : ''}
+                                                    onChange={handleEditChange}
+                                                />
+                                            </Form.Group>
+                                        </Col>
+                                        <Col md={4}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>End Date</Form.Label>
+                                                <Form.Control
+                                                    type="datetime-local"
+                                                    name="endDate"
+                                                    value={editFormData.endDate ? new Date(editFormData.endDate).toISOString().slice(0, 16) : ''}
+                                                    onChange={handleEditChange}
+                                                />
+                                            </Form.Group>
+                                        </Col>
+                                    </Row>
+
+                                    {/* Normal Event Fields */}
+                                    {event.eventType === 'Normal' && (
+                                        <>
+                                            <Row>
+                                                <Col md={6}>
+                                                    <Form.Group className="mb-3">
+                                                        <Form.Label>Location</Form.Label>
+                                                        <Form.Control
+                                                            type="text"
+                                                            name="location"
+                                                            value={editFormData.location || ''}
+                                                            onChange={handleEditChange}
+                                                        />
+                                                    </Form.Group>
+                                                </Col>
+                                                <Col md={6}>
+                                                    <Form.Group className="mb-3">
+                                                        <Form.Label>Category</Form.Label>
+                                                        <Form.Control
+                                                            type="text"
+                                                            name="category"
+                                                            value={editFormData.category || ''}
+                                                            onChange={handleEditChange}
+                                                        />
+                                                    </Form.Group>
+                                                </Col>
+                                            </Row>
+                                            <Row>
+                                                <Col md={6}>
+                                                    <Form.Group className="mb-3">
+                                                        <Form.Label>Capacity</Form.Label>
+                                                        <Form.Control
+                                                            type="number"
+                                                            name="capacity"
+                                                            value={editFormData.capacity || ''}
+                                                            onChange={handleEditChange}
+                                                        />
+                                                    </Form.Group>
+                                                </Col>
+                                                <Col md={6}>
+                                                    <Form.Group className="mb-3">
+                                                        <Form.Label>Registration Fee (₹)</Form.Label>
+                                                        <Form.Control
+                                                            type="number"
+                                                            name="registrationFee"
+                                                            value={editFormData.registrationFee || ''}
+                                                            onChange={handleEditChange}
+                                                        />
+                                                    </Form.Group>
+                                                </Col>
+                                            </Row>
+                                        </>
+                                    )}
+
+                                    {/* Merchandise Event Fields */}
+                                    {event.eventType === 'Merchandise' && (
+                                        <>
+                                            <Row>
+                                                <Col md={4}>
+                                                    <Form.Group className="mb-3">
+                                                        <Form.Label>Price (₹)</Form.Label>
+                                                        <Form.Control
+                                                            type="number"
+                                                            name="price"
+                                                            value={editFormData.price || ''}
+                                                            onChange={handleEditChange}
+                                                        />
+                                                    </Form.Group>
+                                                </Col>
+                                                <Col md={4}>
+                                                    <Form.Group className="mb-3">
+                                                        <Form.Label>Total Stock</Form.Label>
+                                                        <Form.Control
+                                                            type="number"
+                                                            name="totalStock"
+                                                            value={editFormData.totalStock || ''}
+                                                            onChange={handleEditChange}
+                                                        />
+                                                    </Form.Group>
+                                                </Col>
+                                                <Col md={4}>
+                                                    <Form.Group className="mb-3">
+                                                        <Form.Label>Purchase Limit Per Person</Form.Label>
+                                                        <Form.Control
+                                                            type="number"
+                                                            name="purchaseLimitPerParticipant"
+                                                            value={editFormData.purchaseLimitPerParticipant || ''}
+                                                            onChange={handleEditChange}
+                                                        />
+                                                    </Form.Group>
+                                                </Col>
+                                            </Row>
+
+                                            {/* Payment Instructions */}
+                                            <Card className="mb-3 bg-light">
+                                                <Card.Body>
+                                                    <h6 className="mb-3">💳 Payment Instructions</h6>
+                                                    <Row>
+                                                        <Col md={6}>
+                                                            <Form.Group className="mb-3">
+                                                                <Form.Label>UPI ID</Form.Label>
+                                                                <Form.Control
+                                                                    type="text"
+                                                                    name="upiId"
+                                                                    value={editFormData.paymentInstructions?.upiId || ''}
+                                                                    onChange={handlePaymentInstructionsChange}
+                                                                    placeholder="example@upi"
+                                                                />
+                                                            </Form.Group>
+                                                        </Col>
+                                                        <Col md={6}>
+                                                            <Form.Group className="mb-3">
+                                                                <Form.Label>Account Holder Name</Form.Label>
+                                                                <Form.Control
+                                                                    type="text"
+                                                                    name="accountHolderName"
+                                                                    value={editFormData.paymentInstructions?.accountHolderName || ''}
+                                                                    onChange={handlePaymentInstructionsChange}
+                                                                />
+                                                            </Form.Group>
+                                                        </Col>
+                                                    </Row>
+                                                    <Form.Group className="mb-3">
+                                                        <Form.Label>Account Number</Form.Label>
+                                                        <Form.Control
+                                                            type="text"
+                                                            name="accountNumber"
+                                                            value={editFormData.paymentInstructions?.accountNumber || ''}
+                                                            onChange={handlePaymentInstructionsChange}
+                                                        />
+                                                    </Form.Group>
+                                                    <Form.Group className="mb-0">
+                                                        <Form.Label>Additional Notes</Form.Label>
+                                                        <Form.Control
+                                                            as="textarea"
+                                                            rows={2}
+                                                            name="additionalNotes"
+                                                            value={editFormData.paymentInstructions?.additionalNotes || ''}
+                                                            onChange={handlePaymentInstructionsChange}
+                                                            placeholder="Any additional payment instructions..."
+                                                        />
+                                                    </Form.Group>
+                                                </Card.Body>
+                                            </Card>
+                                        </>
+                                    )}
+
+                                    <div className="d-flex gap-2">
+                                        <Button 
+                                            variant="success" 
+                                            type="submit" 
+                                            disabled={updateLoading}
+                                        >
+                                            {updateLoading ? 'Updating...' : '✓ Save Changes'}
+                                        </Button>
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={handleEditToggle}
+                                            disabled={updateLoading}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </Form>
                             </Card.Body>
                         </Card>
-                    </Col>
+                    ) : (
+                        <>
+                    <h4 className="mb-3">📋 Event Overview</h4>
+                    <Row xs={1} md={2} lg={3} className="g-3">
+                            <Col>
+                                <Card className="h-100 shadow-sm">
+                                    <Card.Body>
+                                        <Card.Title className="small text-muted">Type</Card.Title>
+                                        <p className="mb-0"><strong>{event.eventType}</strong></p>
+                                    </Card.Body>
+                                </Card>
+                            </Col>
+
+                            <Col>
+                                <Card className="h-100 shadow-sm">
+                                    <Card.Body>
+                                        <Card.Title className="small text-muted">Status</Card.Title>
+                                        <p className="mb-0"><Badge bg={getStatusBg(event.status)}>{event.status}</Badge></p>
+                                    </Card.Body>
+                                </Card>
+                            </Col>
+
+                            <Col>
+                                <Card className="h-100 shadow-sm">
+                                    <Card.Body>
+                                        <Card.Title className="small text-muted">Eligibility</Card.Title>
+                                        <p className="mb-0"><strong>{event.eligibility}</strong></p>
+                                    </Card.Body>
+                                </Card>
+                            </Col>
 
                     <Col>
                         <Card className="h-100 shadow-sm">
@@ -251,9 +629,15 @@ const OrganizerEventDetails = () => {
                         <p className="mb-0">{event.description}</p>
                     </Card.Body>
                 </Card>
+                </>
+                    )}
             </section>
+            )}
 
-            {/* ===== ANALYTICS SECTION (10.3) ===== */}
+            {/* Show participants section when participants tab is active */}
+            {activeTab === 'participants' && (
+                <>
+                    {/* ===== ANALYTICS SECTION (10.3) ===== */}
             {analytics && (
                 <section className="mb-5">
                     <h4 className="mb-3">📊 Event Analytics</h4>
@@ -394,6 +778,8 @@ const OrganizerEventDetails = () => {
                     Showing {filteredParticipants.length} of {participants.length} participants
                 </p>
             </section>
+                </>
+            )}
         </Container>
     );
 };

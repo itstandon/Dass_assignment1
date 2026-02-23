@@ -25,10 +25,10 @@ const RegistrationSchema = new mongoose.Schema({
         default: Date.now
     },
 
-    // Status: confirmed | cancelled | waitlisted | attended | no-show
+    // Status: pending | confirmed | cancelled | waitlisted | attended | no-show
     status: {
         type: String,
-        enum: ['confirmed', 'cancelled', 'waitlisted', 'attended', 'no-show'],
+        enum: ['pending', 'confirmed', 'cancelled', 'waitlisted', 'attended', 'no-show'],
         default: 'confirmed'
     },
 
@@ -79,11 +79,40 @@ const RegistrationSchema = new mongoose.Schema({
         sparse: true
     },
 
-    // Payment status
+    // Payment status (for merchandise orders)
     paymentStatus: {
         type: String,
-        enum: ['pending', 'completed', 'failed', 'refunded'],
+        enum: ['pending', 'approved', 'rejected', 'completed', 'failed', 'refunded'],
         default: 'pending',
+        sparse: true
+    },
+
+    // Payment proof image URL (uploaded by participant)
+    paymentProof: {
+        type: String,
+        sparse: true
+    },
+
+    // Payment proof upload timestamp
+    paymentProofUploadedAt: {
+        type: Date,
+        sparse: true
+    },
+
+    // Payment approval/rejection details
+    paymentReviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        sparse: true
+    },
+
+    paymentReviewedAt: {
+        type: Date,
+        sparse: true
+    },
+
+    paymentRejectionReason: {
+        type: String,
         sparse: true
     },
 

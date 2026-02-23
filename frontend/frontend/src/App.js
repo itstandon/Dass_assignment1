@@ -41,6 +41,10 @@ import EventAnalytics from './components/EventAnalytics'; // Section 10.3
 import OrganizerDashboard from './components/OrganizerDashboard'; // Section 10.2
 import OrganizerEventDetails from './components/OrganizerEventDetails'; // Section 10.3
 import OngoingEvents from './components/OngoingEvents'; // Section 10.1
+import QRScanner from './components/QRScanner'; // Tier A: QR Scanner
+import AttendanceDashboard from './components/AttendanceDashboard'; // Tier A: Attendance Dashboard
+import OrganizerPasswordReset from './components/OrganizerPasswordReset'; // Tier B: Password Reset
+import AdminPasswordResetDashboard from './components/AdminPasswordResetDashboard'; // Tier B: Password Reset Admin
 
 // Helper Component for Role-Based Access Control (Section 4.2)
 const ProtectedRoute = ({ children, allowedRole }) => {
@@ -166,6 +170,14 @@ function App() {
                         }
                     />
                     <Route
+                        path="/password-reset"
+                        element={
+                            <ProtectedRoute allowedRole="Organizer">
+                                <OrganizerPasswordReset />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/manage-clubs"
                         element={
                             <ProtectedRoute allowedRole="Admin">
@@ -178,8 +190,7 @@ function App() {
                         path="/password-requests"
                         element={
                             <ProtectedRoute allowedRole="Admin">
-                                <h1>🔐 Password Reset Requests</h1>
-                                <p>Manage password reset requests from users</p>
+                                <AdminPasswordResetDashboard />
                             </ProtectedRoute>
                         }
                     />

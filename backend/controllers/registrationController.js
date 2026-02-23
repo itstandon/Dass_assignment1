@@ -199,35 +199,23 @@ exports.purchaseMerchandise = async (req, res) => {
             }
         }
 
-        // 7. Generate ticket ID
-        const ticketId = `MER-${eventId.toString().slice(-6).toUpperCase()}-${participantId.toString().slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-
-        // 8. Calculate total amount
+        // 7. Calculate total amount
         const totalAmount = event.price * quantity;
 
-        // 9. Handle re-purchase after cancellation
+        // 8. Handle re-purchase after cancellation
         let registration;
         
         if (existingPurchase && existingPurchase.status === 'cancelled') {
             // Re-activate cancelled purchase
-            existingPurchase.status = 'confirmed';
+            existingPurchase.status = 'pending'; // Changed: Pending until payment approved
             existingPurchase.quantity = quantity;
             existingPurchase.variantSize = variantSize || '';
             existingPurchase.variantColor = variantColor || '';
-            existingPurchase.ticketId = ticketId;
+            existingPurchase.ticketId = null; // No ticket until approved
             existingPurchase.pricePaid = event.price;
             existingPurchase.totalAmount = totalAmount;
-            existingPurchase.paymentStatus = 'completed';
-            existingPurchase.qrCode = JSON.stringify({
-                ticketId,
-                type: 'Merchandise',
-                eventId,
-                participantId,
-                quantity,
-                size: variantSize,
-                color: variantColor,
-                purchasedAt: new Date()
-            });
+            existingPurchase.paymentStatus = 'pending'; // Awaiting payment proof
+            existingPurchase.qrCode = null; // No QR code until approved
             registration = await existingPurchase.save();
             
             // Add back to event registrations array if removed
@@ -235,28 +223,19 @@ exports.purchaseMerchandise = async (req, res) => {
                 $addToSet: { registrations: registration._id }
             });
         } else if (!existingPurchase) {
-            // Create new purchase record
+            // Create new purchase record - PENDING state
             registration = new Registration({
                 event: eventId,
                 participant: participantId,
                 quantity,
                 variantSize: variantSize || '',
                 variantColor: variantColor || '',
-                ticketId,
+                ticketId: null, // No ticket until payment approved
                 pricePaid: event.price,
                 totalAmount,
-                status: 'confirmed',
-                paymentStatus: 'completed',
-                qrCode: JSON.stringify({
-                    ticketId,
-                    type: 'Merchandise',
-                    eventId,
-                    participantId,
-                    quantity,
-                    size: variantSize,
-                    color: variantColor,
-                    purchasedAt: new Date()
-                })
+                status: 'pending', // Changed: Pending until payment approved
+                paymentStatus: 'pending', // Awaiting payment proof upload
+                qrCode: null // No QR code until approved
             });
 
             await registration.save();
@@ -270,7 +249,7 @@ exports.purchaseMerchandise = async (req, res) => {
             return res.status(400).json({ msg: 'You already have an active purchase for this merchandise event' });
         }
 
-        // 10. Decrement stock [Section 9.5: Stock decrement]
+        // 9. Decrement stock [Section 9.5: Stock decrement]
         event.totalStock -= quantity;
         if (variantSize && variantColor) {
             const variant = event.merchandiseItems[0].variants.find(v =>
@@ -282,29 +261,20 @@ exports.purchaseMerchandise = async (req, res) => {
         }
         await event.save();
 
-        // 11. Populate for response
+        // 10. Populate for response
         await registration.populate('event', 'title merchandiseType price startDate location organizer');
         await registration.populate('participant', 'firstName lastName email participantType');
 
-        // 12. Send purchase confirmation email [Section 9.5: Email Notifications]
-        const qrCodeObject = JSON.parse(registration.qrCode);
-        await sendPurchaseConfirmation(
-            registration.participant,
-            registration.event,
-            registration.ticketId,
-            quantity,
-            variantSize,
-            variantColor,
-            totalAmount,
-            qrCodeObject
-        );
+        // 11. DO NOT send email with QR yet - only after payment approval
+        // const qrCodeObject = JSON.parse(registration.qrCode);
+        // await sendPurchaseConfirmation(...);
 
         res.status(201).json({
-            msg: 'Purchase successful. Confirmation email sent!',
+            msg: 'Order placed successfully. Please upload payment proof to complete your purchase.',
             registration,
-            ticketId: registration.ticketId,
-            qrCode: qrCodeObject,
-            totalAmount
+            registrationId: registration._id,
+            totalAmount,
+            nextStep: 'Upload payment proof to receive your ticket and QR code'
         });
 
     } catch (err) {

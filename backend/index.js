@@ -23,6 +23,10 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/registrations', require('./routes/registrationRoutes')); // Section 9: Event Registration
 app.use('/api/user', require('./routes/userRoutes'));
+app.use('/api/attendance', require('./routes/attendanceRoutes')); // Tier A: QR Scanner & Attendance Tracking
+app.use('/api/payments', require('./routes/paymentRoutes')); // 8 Marks: Merchandise Payment Approval
+app.use('/api/password-reset', require('./routes/passwordResetRoutes')); // 6 Marks: Password Reset Workflow
+app.use('/api/forum', require('./routes/forumRoutes')); // 6 Marks: Real-Time Discussion Forum
 
 app.get('/', (req, res) => {
   res.send('Felicity EMS API is running...');

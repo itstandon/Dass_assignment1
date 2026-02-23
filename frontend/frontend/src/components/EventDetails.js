@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+// src/components/EventDetails.js
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import DiscussionForum from './DiscussionForum';
 
 const EventDetails = () => {
     const { id } = useParams();
@@ -13,18 +15,18 @@ const EventDetails = () => {
     const [formResponses, setFormResponses] = useState({});
     const token = localStorage.getItem('token');
 
-    const fetchEventDetails = useCallback(async () => {
+    useEffect(() => {
+        fetchEventDetails();
+    }, [id]);
+
+    const fetchEventDetails = async () => {
         try {
             const res = await axios.get(`/api/events/${id}`);
             setEvent(res.data);
         } catch (err) {
             console.error('Failed to fetch event details:', err);
         }
-    }, [id]);
-
-    useEffect(() => {
-        fetchEventDetails();
-    }, [fetchEventDetails]);
+    };
 
     const handleRegisterEvent = async () => {
         if (!token) {
@@ -78,6 +80,11 @@ const EventDetails = () => {
                     headers: { 'x-auth-token': token }
                 }
             );
+
+            // Get QR code data
+            const qrData = response.data.registration.qrCode;
+            const qrObject = typeof qrData === 'string' ? JSON.parse(qrData) : qrData;
+            const qrImage = response.data.qrCodeImage;
             
             // Show success alert
             alert(`✅ PURCHASE SUCCESSFUL!\n\n📋 TICKET ID: ${response.data.ticketId}\n💰 TOTAL: ₹${response.data.totalAmount}\n\n✉️ Check your email for QR code image!`);
@@ -275,6 +282,11 @@ const EventDetails = () => {
                         {isLoading ? '⏳ Processing...' : '🛒 Purchase Merchandise'}
                     </button>
                 )}
+            </div>
+
+            {/* Discussion Forum Section */}
+            <div style={{ marginTop: '40px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
+                <DiscussionForum eventId={id} />
             </div>
         </div>
     );

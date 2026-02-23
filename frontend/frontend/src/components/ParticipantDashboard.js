@@ -1,14 +1,22 @@
 // src/components/ParticipantDashboard.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getGoogleCalendarLink, getOutlookCalendarLink, downloadICS } from '../utils/calendar';
+import PaymentProofUpload from './PaymentProofUpload';
+import PaymentInstructions from './PaymentInstructions';
 
 const ParticipantDashboard = () => {
     const [registrations, setRegistrations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
+    const [uploadingForOrder, setUploadingForOrder] = useState(null);
     const token = localStorage.getItem('token');
 
-    const fetchRegistrations = useCallback(async () => {
+    useEffect(() => {
+        fetchRegistrations();
+    }, []);
+
+    const fetchRegistrations = async () => {
         try {
             const res = await axios.get('/api/registrations/user', {
                 headers: { 'x-auth-token': token }
@@ -19,11 +27,7 @@ const ParticipantDashboard = () => {
             console.error('Failed to fetch registrations', err);
             setLoading(false);
         }
-    }, [token]);
-
-    useEffect(() => {
-        fetchRegistrations();
-    }, [fetchRegistrations]);
+    };
 
     const handleCancelRegistration = async (eventId) => {
         if (!window.confirm('Cancel this registration?')) return;
@@ -63,6 +67,37 @@ const ParticipantDashboard = () => {
     return (
         <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto' }}>
             <h1>📅 My Events & Registrations [Section 9.2]</h1>
+
+            {/* Batch Export Button */}
+            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                    onClick={() => {
+                        const events = filterRegistrations()
+                            .map(r => r.event)
+                            .filter(e => e && e.startDate); // Use correct field name: startDate
+                        
+                        if (events.length > 0) {
+                            downloadICS(events, 'my-events.ics');
+                        } else {
+                            alert('No scheduled events found to export.');
+                        }
+                    }}
+                    style={{
+                        padding: '8px 16px',
+                        background: '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}
+                >
+                    📅 Export Calendar (.ics)
+                </button>
+            </div>
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #ddd', paddingBottom: '10px', flexWrap: 'wrap' }}>
@@ -184,7 +219,7 @@ const ParticipantDashboard = () => {
                                     <span style={{
                                         marginLeft: '10px',
                                         padding: '4px 12px',
-                                        background: reg.status === 'confirmed' ? '#28a745' : reg.status === 'attended' ? '#2196f3' : '#dc3545',
+                                        background: reg.status === 'confirmed' ? '#28a745' : reg.status === 'attended' ? '#2196f3' : reg.status === 'pending' ? '#ff9800' : '#dc3545',
                                         color: 'white',
                                         borderRadius: '20px',
                                         fontSize: '12px',
@@ -194,24 +229,107 @@ const ParticipantDashboard = () => {
                                     </span>
                                 </p>
                                 {reg.event?.eventType === 'Merchandise' && (
-                                    <p style={{ margin: '5px 0' }}><strong>Quantity:</strong> {reg.quantity} | <strong>Total:</strong> ₹{reg.totalAmount}</p>
+                                    <>
+                                        <p style={{ margin: '5px 0' }}><strong>Quantity:</strong> {reg.quantity} | <strong>Total:</strong> ₹{reg.totalAmount}</p>
+                                        {reg.paymentStatus && (
+                                            <p style={{ margin: '5px 0' }}>
+                                                <strong>Payment:</strong> 
+                                                <span style={{
+                                                    marginLeft: '8px',
+                                                    padding: '3px 10px',
+                                                    background: reg.paymentStatus === 'approved' ? '#28a745' : reg.paymentStatus === 'pending' ? '#ff9800' : '#dc3545',
+                                                    color: 'white',
+                                                    borderRadius: '12px',
+                                                    fontSize: '11px',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    {reg.paymentStatus.toUpperCase()}
+                                                </span>
+                                            </p>
+                                        )}
+                                    </>
                                 )}
                                 <p style={{ margin: '5px 0', color: '#666', fontSize: '12px' }}>
                                     <strong>Registered:</strong> {new Date(reg.registrationDate).toLocaleDateString()}
                                 </p>
+
+                                {/* Payment Proof Upload Section for Merchandise */}
+                                {reg.event?.eventType === 'Merchandise' && reg.status === 'pending' && reg.paymentStatus === 'pending' && !reg.paymentProof && (
+                                    <div style={{ marginTop: '15px', width: '100%' }}>
+                                        {uploadingForOrder === reg._id ? (
+                                            <div>
+                                                <PaymentInstructions event={reg.event} />
+                                                <PaymentProofUpload 
+                                                    registrationId={reg._id}
+                                                    onUploadComplete={() => {
+                                                        setUploadingForOrder(null);
+                                                        fetchRegistrations();
+                                                    }}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <button 
+                                                onClick={() => setUploadingForOrder(reg._id)}
+                                                style={{
+                                                    padding: '10px 16px',
+                                                    background: '#ff9800',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 'bold',
+                                                    width: '100%'
+                                                }}
+                                            >
+                                                📤 Upload Payment Proof
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Show payment proof status if uploaded */}
+                                {reg.paymentProof && (
+                                    <div style={{ marginTop: '10px', padding: '8px', background: '#e7f3ff', borderRadius: '4px', fontSize: '12px' }}>
+                                        <strong>✅ Payment proof submitted</strong>
+                                        <p style={{ margin: '3px 0 0 0', color: '#666' }}>
+                                            {reg.paymentStatus === 'pending' ? 'Awaiting approval' : reg.paymentStatus === 'approved' ? 'Approved!' : 'Rejected'}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                            <div style={{ marginLeft: '20px' }}>
+                            <div style={{ marginLeft: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                                {/* Calendar Actions */}
+                                {reg.event?.startDate && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'flex-end' }}>
+                                        <a href={getGoogleCalendarLink(reg.event)} target="_blank" rel="noopener noreferrer" 
+                                           style={{ fontSize: '12px', color: '#4285F4', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <span>📅</span> Google Cal
+                                        </a>
+                                        <a href={getOutlookCalendarLink(reg.event)} target="_blank" rel="noopener noreferrer" 
+                                           style={{ fontSize: '12px', color: '#0078D4', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <span>📅</span> Outlook
+                                        </a>
+                                        <button 
+                                            onClick={() => downloadICS(reg.event, `${reg.event.title}.ics`)}
+                                            style={{ background: 'none', border: 'none', color: '#555', fontSize: '12px', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}
+                                        >
+                                            ⬇️ Download .ics
+                                        </button>
+                                    </div>
+                                )}
+
                                 {reg.status === 'confirmed' && (
                                     <button 
                                         onClick={() => handleCancelRegistration(reg.event._id)}
                                         style={{
-                                            padding: '10px 20px',
+                                            padding: '8px 16px',
                                             background: '#dc3545',
                                             color: 'white',
                                             border: 'none',
                                             borderRadius: '4px',
                                             cursor: 'pointer',
-                                            whiteSpace: 'nowrap'
+                                            whiteSpace: 'nowrap',
+                                            fontSize: '14px'
                                         }}
                                     >
                                         Cancel
