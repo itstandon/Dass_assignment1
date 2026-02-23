@@ -10,9 +10,10 @@ const { auth, isParticipant } = require('../middleware/auth');
 router.get('/organizers', async (req, res) => {
     try {
         const organizers = await User.find({ 
-            role: 'Organizer', 
-            isArchived: false 
+            role: 'Organizer'
         }).select('organizerName email category description contactEmail');
+        
+        // Return all organizers (archived or not)
         res.json(organizers);
     } catch (err) {
         console.error(err.message);
