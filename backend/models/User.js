@@ -30,6 +30,7 @@ const UserSchema = new mongoose.Schema({
     description: { type: String },
     discordWebhookUrl: { type: String }, // For Organizer notifications [Section 10.5]
     isArchived: { type: Boolean, default: false }, // Section 11.2: Archive organizer (disable login)
+    tokenInvalidatedAt: { type: Date }, // Force logout by invalidating all tokens before this timestamp
     
     // Preferences (Participants only) [cite: 48, 49, 54]
     interests: [{ type: String }],

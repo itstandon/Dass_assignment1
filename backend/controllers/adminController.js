@@ -129,6 +129,17 @@ exports.archiveOrganizer = async (req, res) => {
         
         // Toggle archive status
         organizer.isArchived = !organizer.isArchived;
+        
+        // CRITICAL FIX: Invalidate all existing tokens when archiving
+        if (organizer.isArchived) {
+            organizer.tokenInvalidatedAt = new Date();
+            console.log('🔒 Invalidating all existing tokens at:', organizer.tokenInvalidatedAt);
+        } else {
+            // When reactivating, clear the invalidation timestamp
+            organizer.tokenInvalidatedAt = null;
+            console.log('🔓 Clearing token invalidation (reactivating)');
+        }
+        
         await organizer.save();
 
         console.log('✅ New isArchived status:', organizer.isArchived);

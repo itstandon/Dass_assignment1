@@ -16,6 +16,17 @@ const auth = async (req, res, next) => {
         
         console.log(`🔒 Auth check - User: ${user.email}, Role: ${user.role}, isArchived: ${user.isArchived}`);
         
+        // CRITICAL FIX: Check if token was created before invalidation timestamp
+        if (user.tokenInvalidatedAt) {
+            const tokenIssuedAt = new Date(decoded.iat * 1000); // JWT iat is in seconds
+            if (tokenIssuedAt < user.tokenInvalidatedAt) {
+                console.log('❌ BLOCKED - Token was invalidated (user was archived)');
+                console.log(`   Token issued at: ${tokenIssuedAt}`);
+                console.log(`   Invalidated at: ${user.tokenInvalidatedAt}`);
+                return res.status(403).json({ msg: 'Account has been archived. Please contact admin.' });
+            }
+        }
+        
         if (user.isArchived) {
             console.log('❌ BLOCKED - User is archived');
             return res.status(403).json({ msg: 'Account has been archived. Please contact admin.' });
