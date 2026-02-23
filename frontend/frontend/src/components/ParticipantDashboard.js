@@ -4,12 +4,14 @@ import axios from 'axios';
 import { getGoogleCalendarLink, getOutlookCalendarLink, downloadICS } from '../utils/calendar';
 import PaymentProofUpload from './PaymentProofUpload';
 import PaymentInstructions from './PaymentInstructions';
+import TicketModal from './TicketModal';
 
 const ParticipantDashboard = () => {
     const [registrations, setRegistrations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
     const [uploadingForOrder, setUploadingForOrder] = useState(null);
+    const [selectedTicket, setSelectedTicket] = useState(null);
     const token = localStorage.getItem('token');
 
     useEffect(() => {
@@ -227,8 +229,33 @@ const ParticipantDashboard = () => {
                             <div style={{ flex: 1 }}>
                                 <h3 style={{ margin: '0 0 10px 0' }}>{reg.event?.title}</h3>
                                 <p style={{ margin: '5px 0' }}><strong>Type:</strong> {reg.event?.eventType}</p>
-                                <p style={{ margin: '5px 0' }}><strong>Organizer:</strong> {reg.event?.organizer?.organizerName}</p>
-                                <p style={{ margin: '5px 0' }}><strong>Ticket ID:</strong> <code style={{ background: '#eee', padding: '2px 6px', borderRadius: '3px' }}>{reg.ticketId}</code></p>
+                                <p style={{ margin: '5px 0' }}>
+                                    <strong>Organizer:</strong> {reg.event?.organizer?.organizerName || 'N/A'}
+                                </p>
+                                <p style={{ margin: '5px 0' }}>
+                                    <strong>Ticket ID:</strong> 
+                                    <code 
+                                        onClick={() => setSelectedTicket(reg)}
+                                        style={{ 
+                                            background: '#007bff', 
+                                            color: 'white',
+                                            padding: '4px 10px', 
+                                            borderRadius: '4px',
+                                            marginLeft: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: 'bold',
+                                            display: 'inline-block'
+                                        }}
+                                        title="Click to view ticket details"
+                                    >
+                                        🎫 {reg.ticketId}
+                                    </code>
+                                </p>
+                                {reg.teamName && (
+                                    <p style={{ margin: '5px 0' }}>
+                                        <strong>Team Name:</strong> {reg.teamName}
+                                    </p>
+                                )}
                                 {reg.qrCode && (
                                     <details style={{ margin: '8px 0', padding: '8px', background: '#fffbea', border: '1px solid #ffd700', borderRadius: '4px' }}>
                                         <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#ff9800' }}>📱 View QR Code (Black & White Squares)</summary>
@@ -375,6 +402,14 @@ const ParticipantDashboard = () => {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {/* Ticket Modal */}
+            {selectedTicket && (
+                <TicketModal 
+                    registration={selectedTicket}
+                    onClose={() => setSelectedTicket(null)}
+                />
             )}
         </div>
     );

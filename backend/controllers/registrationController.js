@@ -321,8 +321,15 @@ exports.getParticipantRegistrations = async (req, res) => {
         const participantId = req.user.id;
 
         const registrations = await Registration.find({ participant: participantId })
-            .populate('event', 'title eventType startDate endDate organizer')
-            .populate('event.organizer', 'organizerName')
+            .populate({
+                path: 'event',
+                select: 'title eventType date time venue category startDate endDate organizer',
+                populate: {
+                    path: 'organizer',
+                    select: 'organizerName category contactEmail'
+                }
+            })
+            .populate('participant', 'firstName lastName email')
             .sort({ registrationDate: -1 });
 
         res.json(registrations);
