@@ -147,8 +147,7 @@ router.get('/organizers/:id', auth, async (req, res) => {
     try {
         const organizer = await User.findOne({ 
             _id: req.params.id, 
-            role: 'Organizer',
-            isArchived: false 
+            role: 'Organizer'
         }).select('organizerName category description contactEmail');
         
         if (!organizer) {
