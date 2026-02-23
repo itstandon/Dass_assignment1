@@ -29,6 +29,7 @@ const UserSchema = new mongoose.Schema({
     contactEmail: { type: String },
     description: { type: String },
     discordWebhookUrl: { type: String }, // For Organizer notifications [Section 10.5]
+    isArchived: { type: Boolean, default: false }, // Section 11.2: Archive organizer (disable login)
     
     // Preferences (Participants only) [cite: 48, 49, 54]
     interests: [{ type: String }],

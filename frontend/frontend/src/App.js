@@ -36,7 +36,8 @@ import Clubs from './components/Clubs'; // Section 9.3
 import Profile from './components/Profile'; // User profile
 // import CreateEvent from './components/CreateEvent';
 import CreateEventAdvanced from './components/CreateEventAdvanced'; // Section 8
-import AdminDashboard from './components/AdminDashboard'; // Section 11
+import AdminDashboard from './components/AdminDashboard'; // Section 11 - Overview
+import ManageClubs from './components/ManageClubs'; // Section 11.2 - Manage Clubs/Organizers
 import EventAnalytics from './components/EventAnalytics'; // Section 10.3
 import OrganizerDashboard from './components/OrganizerDashboard'; // Section 10.2
 import OrganizerEventDetails from './components/OrganizerEventDetails'; // Section 10.3
@@ -134,6 +135,14 @@ function App() {
                         element={
                             <ProtectedRoute allowedRole="Admin">
                                 <AdminDashboard />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/manage-clubs"
+                        element={
+                            <ProtectedRoute allowedRole="Admin">
+                                <ManageClubs />
                             </ProtectedRoute>
                         }
                     />

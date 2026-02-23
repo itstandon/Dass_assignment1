@@ -92,7 +92,7 @@ exports.getOrganizerById = async (req, res) => {
 };
 
 // @route   DELETE /api/admin/organizers/:id
-// @desc    Remove an organizer [Section 11.2]
+// @desc    PERMANENTLY Remove an organizer [Section 11.2]
 // @access  Admin
 exports.deleteOrganizer = async (req, res) => {
     try {
@@ -104,7 +104,36 @@ exports.deleteOrganizer = async (req, res) => {
 
         await User.findByIdAndDelete(req.params.id);
 
-        res.json({ msg: 'Organizer removed successfully' });
+        res.json({ msg: 'Organizer permanently deleted' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// @route   PUT /api/admin/organizers/:id/archive
+// @desc    Archive/Unarchive organizer (disable/enable login) [Section 11.2]
+// @access  Admin
+exports.archiveOrganizer = async (req, res) => {
+    try {
+        const organizer = await User.findById(req.params.id);
+        
+        if (!organizer || organizer.role !== 'Organizer') {
+            return res.status(404).json({ msg: 'Organizer not found' });
+        }
+
+        // Toggle archive status
+        organizer.isArchived = !organizer.isArchived;
+        await organizer.save();
+
+        res.json({ 
+            msg: `Organizer ${organizer.isArchived ? 'archived' : 'reactivated'} successfully`,
+            organizer: {
+                id: organizer._id,
+                organizerName: organizer.organizerName,
+                isArchived: organizer.isArchived
+            }
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ msg: 'Server error' });
@@ -112,7 +141,7 @@ exports.deleteOrganizer = async (req, res) => {
 };
 
 // @route   PUT /api/admin/organizers/:id/status
-// @desc    Enable/Disable organizer account
+// @desc    Enable/Disable organizer account (legacy)
 // @access  Admin
 exports.toggleOrganizerStatus = async (req, res) => {
     try {

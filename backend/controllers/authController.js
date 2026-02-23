@@ -73,6 +73,11 @@ exports.login = async (req, res) => {
         let user = await User.findOne({ email });
         if (!user) return res.status(400).json({ msg: 'Invalid Credentials' });
 
+        // Section 11.2: Prevent archived organizers from logging in
+        if (user.role === 'Organizer' && user.isArchived) {
+            return res.status(403).json({ msg: 'Account has been archived. Please contact admin.' });
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ msg: 'Invalid Credentials' });
 

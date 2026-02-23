@@ -1,82 +1,55 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/AdminDashboard.css';
 
 const AdminDashboard = () => {
-    const [organizers, setOrganizers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [newOrgForm, setNewOrgForm] = useState({
-        organizerName: '',
-        category: '',
-        description: '',
-        contactEmail: ''
+    const [stats, setStats] = useState({
+        totalOrganizers: 0,
+        activeOrganizers: 0,
+        archivedOrganizers: 0,
+        pendingPasswordResets: 0
     });
-    const [showForm, setShowForm] = useState(false);
+    const [loading, setLoading] = useState(true);
     const token = localStorage.getItem('token');
 
-    const fetchOrganizers = useCallback(async () => {
+    const fetchStats = useCallback(async () => {
         try {
-            // Get all users with Organizer role
-            const res = await axios.get('/api/admin/organizers', {
+            const orgRes = await axios.get('/api/admin/organizers', {
                 headers: { 'x-auth-token': token }
             });
-            setOrganizers(res.data);
+            
+            const totalOrganizers = orgRes.data.length;
+            const activeOrganizers = orgRes.data.filter(org => !org.isArchived).length;
+            const archivedOrganizers = orgRes.data.filter(org => org.isArchived).length;
+
+            // Try to fetch password reset requests (if implemented)
+            let pendingPasswordResets = 0;
+            try {
+                const resetRes = await axios.get('/api/admin/password-reset-requests', {
+                    headers: { 'x-auth-token': token }
+                });
+                pendingPasswordResets = resetRes.data.filter(req => req.status === 'Pending').length;
+            } catch (err) {
+                console.log('Password reset endpoint not available yet');
+            }
+
+            setStats({
+                totalOrganizers,
+                activeOrganizers,
+                archivedOrganizers,
+                pendingPasswordResets
+            });
             setLoading(false);
         } catch (err) {
-            console.error('Failed to fetch organizers', err);
+            console.error('Failed to fetch stats', err);
             setLoading(false);
         }
     }, [token]);
 
     useEffect(() => {
-        fetchOrganizers();
-    }, [fetchOrganizers]);
-
-    const handleCreateOrganizer = async (e) => {
-        e.preventDefault();
-        
-        // Validate form
-        if (!newOrgForm.organizerName || !newOrgForm.category || !newOrgForm.contactEmail) {
-            alert('Please fill all required fields: Name, Category, Contact Email');
-            return;
-        }
-
-        try {
-            console.log('Sending organizer form:', newOrgForm);
-            const res = await axios.post('/api/admin/create-organizer', newOrgForm, {
-                headers: { 'x-auth-token': token }
-            });
-
-            console.log('Response:', res.data);
-            alert(`✅ Organizer Created Successfully!\n\n📧 Email: ${res.data.credentials.email}\n🔐 Password: ${res.data.credentials.password}\n\n⚠️ Copy these credentials and share securely with the organizer!`);
-            setNewOrgForm({
-                organizerName: '',
-                category: '',
-                description: '',
-                contactEmail: ''
-            });
-            setShowForm(false);
-            fetchOrganizers();
-        } catch (err) {
-            console.error('Error creating organizer:', err);
-            const errorMsg = err.response?.data?.msg || err.response?.data?.error || 'Failed to create organizer';
-            alert(`❌ Error: ${errorMsg}`);
-        }
-    };
-
-    const handleDeleteOrganizer = async (organizerId) => {
-        if (!window.confirm('Are you sure you want to remove this organizer?')) return;
-
-        try {
-            await axios.delete(`/api/admin/organizers/${organizerId}`, {
-                headers: { 'x-auth-token': token }
-            });
-            alert('Organizer removed successfully');
-            fetchOrganizers();
-        } catch (err) {
-            alert(err.response?.data?.msg || 'Failed to remove organizer');
-        }
-    };
+        fetchStats();
+    }, [fetchStats]);
 
     if (loading) return <div className="admin-dashboard"><p>Loading...</p></div>;
 
@@ -84,112 +57,70 @@ const AdminDashboard = () => {
         <div className="admin-dashboard">
             <div className="container">
                 <h1>🔐 Admin Dashboard [Section 11]</h1>
+                <p className="subtitle">System Overview and Management</p>
 
-                <div className="dashboard-section">
-                    <div className="section-header">
-                        <h2>Manage Clubs/Organizers</h2>
-                        <button 
-                            className="btn-add"
-                            onClick={() => setShowForm(!showForm)}
-                        >
-                            {showForm ? '❌ Cancel' : '➕ Add New Organizer'}
-                        </button>
+                {/* Stats Cards */}
+                <div className="stats-grid">
+                    <div className="stat-card primary">
+                        <div className="stat-icon">📊</div>
+                        <div className="stat-info">
+                            <h3>{stats.totalOrganizers}</h3>
+                            <p>Total Organizers</p>
+                        </div>
                     </div>
 
-                    {/* Create Organizer Form */}
-                    {showForm && (
-                        <form onSubmit={handleCreateOrganizer} className="organizer-form">
-                            <div className="form-group">
-                                <label>Organizer Name *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g., Coding Club"
-                                    value={newOrgForm.organizerName}
-                                    onChange={(e) => setNewOrgForm({...newOrgForm, organizerName: e.target.value})}
-                                />
-                            </div>
+                    <div className="stat-card success">
+                        <div className="stat-icon">✅</div>
+                        <div className="stat-info">
+                            <h3>{stats.activeOrganizers}</h3>
+                            <p>Active Organizers</p>
+                        </div>
+                    </div>
 
-                            <div className="form-group">
-                                <label>Category *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g., Technical"
-                                    value={newOrgForm.category}
-                                    onChange={(e) => setNewOrgForm({...newOrgForm, category: e.target.value})}
-                                />
-                            </div>
+                    <div className="stat-card warning">
+                        <div className="stat-icon">📦</div>
+                        <div className="stat-info">
+                            <h3>{stats.archivedOrganizers}</h3>
+                            <p>Archived Organizers</p>
+                        </div>
+                    </div>
 
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea
-                                    placeholder="Club description"
-                                    rows="3"
-                                    value={newOrgForm.description}
-                                    onChange={(e) => setNewOrgForm({...newOrgForm, description: e.target.value})}
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Contact Email *</label>
-                                <input
-                                    type="email"
-                                    required
-                                    placeholder="contact@club.com"
-                                    value={newOrgForm.contactEmail}
-                                    onChange={(e) => setNewOrgForm({...newOrgForm, contactEmail: e.target.value})}
-                                />
-                            </div>
-
-                            <button type="submit" className="btn-submit">Create Organizer</button>
-                        </form>
-                    )}
-
-                    {/* Organizers List */}
-                    <div className="organizers-list">
-                        {organizers.length === 0 ? (
-                            <p className="empty-state">No organizers yet. Create one to get started!</p>
-                        ) : (
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Organizer Name</th>
-                                        <th>Category</th>
-                                        <th>Email</th>
-                                        <th>Contact Email</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {organizers.map(org => (
-                                        <tr key={org._id}>
-                                            <td className="org-name">{org.organizerName}</td>
-                                            <td>{org.category}</td>
-                                            <td className="email">{org.email}</td>
-                                            <td>{org.contactEmail || '-'}</td>
-                                            <td><span className="status-badge">Active</span></td>
-                                            <td className="actions">
-                                                <button 
-                                                    className="btn-danger"
-                                                    onClick={() => handleDeleteOrganizer(org._id)}
-                                                >
-                                                    Remove
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
+                    <div className="stat-card danger">
+                        <div className="stat-icon">🔑</div>
+                        <div className="stat-info">
+                            <h3>{stats.pendingPasswordResets}</h3>
+                            <p>Pending Password Resets</p>
+                        </div>
                     </div>
                 </div>
 
+                {/* Quick Actions */}
+                <div className="dashboard-section">
+                    <h2>⚡ Quick Actions</h2>
+                    <div className="actions-grid">
+                        <Link to="/manage-clubs" className="action-card">
+                            <div className="action-icon">📋</div>
+                            <h3>Manage Clubs/Organizers</h3>
+                            <p>Add, archive, or delete club organizers. View all organizer accounts.</p>
+                        </Link>
+
+                        <Link to="/password-requests" className="action-card">
+                            <div className="action-icon">🔑</div>
+                            <h3>Password Reset Requests</h3>
+                            <p>Review and approve password reset requests from organizers.</p>
+                        </Link>
+                    </div>
+                </div>
+
+                {/* System Info */}
                 <div className="info-box">
-                    <h3>📝 Note:</h3>
-                    <p>When creating an organizer, the system auto-generates login credentials. Share these credentials securely with the organizer.</p>
-                    <p>Organizers can log in, manage events, and view analytics immediately after creation.</p>
+                    <h3>📝 Admin Responsibilities:</h3>
+                    <ul>
+                        <li><strong>Manage Organizers:</strong> Create new club/organizer accounts with auto-generated credentials</li>
+                        <li><strong>Account Control:</strong> Archive (disable login) or permanently delete organizer accounts</li>
+                        <li><strong>Password Resets:</strong> Approve or reject password reset requests from organizers</li>
+                        <li><strong>System Oversight:</strong> Monitor system activity and ensure smooth operations</li>
+                    </ul>
                 </div>
             </div>
         </div>
