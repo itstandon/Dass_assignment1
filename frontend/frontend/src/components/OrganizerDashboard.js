@@ -27,11 +27,35 @@ const OrganizerDashboard = () => {
         fetchEvents();
     }, []);
 
+    // Helper function to calculate actual event status based on dates
+    const getEventStatus = (event) => {
+        const now = new Date();
+        const startDate = event.startDate ? new Date(event.startDate) : null;
+        const endDate = event.endDate ? new Date(event.endDate) : null;
+
+        // If event is marked as Draft, keep it as Draft
+        if (event.status === 'Draft') return 'Draft';
+
+        // If no dates, use database status
+        if (!startDate || !endDate) return event.status || 'Scheduled';
+
+        // Calculate based on dates
+        if (endDate < now) {
+            return 'Completed'; // Event has ended
+        } else if (startDate <= now && now <= endDate) {
+            return 'Ongoing'; // Event is currently happening
+        } else if (startDate > now) {
+            return 'Scheduled'; // Event hasn't started yet
+        }
+
+        return event.status || 'Scheduled';
+    };
+
     const categorizedEvents = {
-        Draft: events.filter(e => e.status === 'Draft' || !e.status),
-        Published: events.filter(e => e.status === 'Scheduled'),
-        Ongoing: events.filter(e => e.status === 'Ongoing'),
-        Completed: events.filter(e => e.status === 'Completed' || e.status === 'Cancelled')
+        Draft: events.filter(e => getEventStatus(e) === 'Draft'),
+        Published: events.filter(e => getEventStatus(e) === 'Scheduled'),
+        Ongoing: events.filter(e => getEventStatus(e) === 'Ongoing'),
+        Completed: events.filter(e => getEventStatus(e) === 'Completed' || e.status === 'Cancelled')
     };
 
     // Calculate analytics from local events
@@ -119,7 +143,7 @@ const OrganizerDashboard = () => {
                     <Row xs={1} md={2} lg={3} className="g-4">
                         {categorizedEvents.Ongoing.map(event => (
                             <Col key={event._id}>
-                                <EventCard event={event} />
+                                <EventCard event={event} calculatedStatus={getEventStatus(event)} />
                             </Col>
                         ))}
                     </Row>
@@ -133,7 +157,7 @@ const OrganizerDashboard = () => {
                     <Row xs={1} md={2} lg={3} className="g-4">
                         {categorizedEvents.Published.map(event => (
                             <Col key={event._id}>
-                                <EventCard event={event} />
+                                <EventCard event={event} calculatedStatus={getEventStatus(event)} />
                             </Col>
                         ))}
                     </Row>
@@ -147,7 +171,7 @@ const OrganizerDashboard = () => {
                     <Row xs={1} md={2} lg={3} className="g-4">
                         {completedEvents.map(event => (
                             <Col key={event._id}>
-                                <EventCard event={event} isPast />
+                                <EventCard event={event} calculatedStatus={getEventStatus(event)} isPast />
                             </Col>
                         ))}
                     </Row>
@@ -157,12 +181,12 @@ const OrganizerDashboard = () => {
     );
 };
 
-const EventCard = ({ event, isPast }) => (
+const EventCard = ({ event, calculatedStatus, isPast }) => (
     <Card className={`h-100 shadow-sm ${isPast ? 'bg-light' : ''}`}>
         <Card.Body>
             <div className="d-flex justify-content-between align-items-start mb-2">
                 <Badge bg={event.eventType === 'Normal' ? 'info' : 'warning'}>{event.eventType}</Badge>
-                <Badge bg={getStatusVariant(event.status)}>{event.status}</Badge>
+                <Badge bg={getStatusVariant(calculatedStatus || event.status)}>{calculatedStatus || event.status}</Badge>
             </div>
             <Card.Title>{event.title}</Card.Title>
             <Card.Text className="text-muted small mb-2">

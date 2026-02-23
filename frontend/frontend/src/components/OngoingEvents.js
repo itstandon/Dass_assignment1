@@ -16,8 +16,16 @@ const OngoingEvents = () => {
                     headers: { 'x-auth-token': token }
                 });
 
-                // Filter only ongoing events
-                const ongoingEvents = res.data.filter(e => e.status === 'Ongoing');
+                // Filter only ongoing events based on dates
+                const now = new Date();
+                const ongoingEvents = res.data.filter(event => {
+                    const startDate = event.startDate ? new Date(event.startDate) : null;
+                    const endDate = event.endDate ? new Date(event.endDate) : null;
+                    
+                    // Event is ongoing if: startDate <= now <= endDate
+                    return startDate && endDate && startDate <= now && now <= endDate;
+                });
+                
                 setEvents(ongoingEvents);
                 setLoading(false);
             } catch (err) {
