@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 const { auth, isParticipant } = require('../middleware/auth');
 
 // @route   GET /api/user/preferences
@@ -93,6 +94,65 @@ router.put('/profile', auth, async (req, res) => {
         ).select('-password');
 
         res.json(user);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET /api/user/followed-clubs
+// @desc    Get details of followed clubs (Section 9.6 - Followed Clubs)
+router.get('/followed-clubs', auth, isParticipant, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).populate('followedClubs', 'organizerName email category');
+        res.json(user.followedClubs);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET /api/user/all-clubs
+// @desc    Get all available clubs for selection (Section 9.6 - Followed Clubs editing)
+router.get('/all-clubs', auth, async (req, res) => {
+    try {
+        const clubs = await User.find({ role: 'Organizer', isArchived: false }).select('organizerName email category');
+        res.json(clubs);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   PUT /api/user/change-password
+// @desc    Change user password (Section 9.6 Security Settings)
+router.put('/change-password', auth, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        // Validation
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ msg: 'Please provide current and new password' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ msg: 'New password must be at least 6 characters' });
+        }
+
+        // Get user with password
+        const user = await User.findById(req.user.id);
+        
+        // Verify current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'Current password is incorrect' });
+        }
+
+        // Update password (pre-save hook will hash it)
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ msg: 'Password changed successfully' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
