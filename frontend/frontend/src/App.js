@@ -46,6 +46,7 @@ import QRScanner from './components/QRScanner'; // Tier A: QR Scanner
 import AttendanceDashboard from './components/AttendanceDashboard'; // Tier A: Attendance Dashboard
 import OrganizerPasswordReset from './components/OrganizerPasswordReset'; // Tier B: Password Reset
 import AdminPasswordResetDashboard from './components/AdminPasswordResetDashboard'; // Tier B: Password Reset Admin
+import OrganizerDetail from './components/OrganizerDetail'; // Organizer Detail Page
 
 // Helper Component for Role-Based Access Control (Section 4.2)
 const ProtectedRoute = ({ children, allowedRole }) => {
@@ -159,6 +160,14 @@ function App() {
                         element={
                             <ProtectedRoute allowedRole="Participant">
                                 <Clubs />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/organizer/:id"
+                        element={
+                            <ProtectedRoute allowedRole="Participant">
+                                <OrganizerDetail />
                             </ProtectedRoute>
                         }
                     />

@@ -116,8 +116,29 @@ router.get('/followed-clubs', auth, isParticipant, async (req, res) => {
 // @desc    Get all available clubs for selection (Section 9.6 - Followed Clubs editing)
 router.get('/all-clubs', auth, async (req, res) => {
     try {
-        const clubs = await User.find({ role: 'Organizer', isArchived: false }).select('organizerName email category');
+        const clubs = await User.find({ role: 'Organizer', isArchived: false }).select('organizerName email category description contactEmail');
         res.json(clubs);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET /api/user/organizers/:id
+// @desc    Get organizer details (Section: Organizer Detail Page)
+router.get('/organizers/:id', auth, async (req, res) => {
+    try {
+        const organizer = await User.findOne({ 
+            _id: req.params.id, 
+            role: 'Organizer',
+            isArchived: false 
+        }).select('organizerName category description contactEmail');
+        
+        if (!organizer) {
+            return res.status(404).json({ msg: 'Organizer not found' });
+        }
+        
+        res.json(organizer);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

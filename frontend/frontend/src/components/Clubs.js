@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const Clubs = () => {
     const [organizers, setOrganizers] = useState([]);
@@ -9,20 +10,17 @@ const Clubs = () => {
 
     const fetchOrganizers = useCallback(async () => {
         try {
-            const res = await axios.get('/api/events');
-            const uniqueOrganizers = {};
-            res.data.forEach(event => {
-                if (event.organizer && !uniqueOrganizers[event.organizer._id]) {
-                    uniqueOrganizers[event.organizer._id] = event.organizer;
-                }
+            // Fetch all approved organizers
+            const res = await axios.get('/api/user/all-clubs', {
+                headers: { 'x-auth-token': token }
             });
-            setOrganizers(Object.values(uniqueOrganizers));
+            setOrganizers(res.data);
             setLoading(false);
         } catch (err) {
             console.error('Failed to fetch organizers', err);
             setLoading(false);
         }
-    }, []);
+    }, [token]);
 
     const fetchFollowedClubs = useCallback(async () => {
         try {
@@ -92,34 +90,52 @@ const Clubs = () => {
                             }}
                         >
                             <h3>{org.organizerName}</h3>
-                            <p><strong>Category:</strong> {org.category}</p>
+                            <p><strong>Category:</strong> {org.category || 'N/A'}</p>
                             {org.description && (
                                 <p style={{ color: '#666', marginTop: '10px' }}>{org.description}</p>
                             )}
-                            {org.contactEmail && (
-                                <p><strong>Contact:</strong> {org.contactEmail}</p>
-                            )}
                             
-                            <button
-                                onClick={() => 
-                                    followedClubs.includes(org._id)
-                                        ? handleUnfollowClub(org._id)
-                                        : handleFollowClub(org._id)
-                                }
-                                style={{
-                                    marginTop: '15px',
-                                    padding: '10px 20px',
-                                    background: followedClubs.includes(org._id) ? '#dc3545' : '#28a745',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    width: '100%',
-                                    fontWeight: 'bold'
-                                }}
-                            >
-                                {followedClubs.includes(org._id) ? '⭐ Following' : '☆ Follow'}
-                            </button>
+                            <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => 
+                                        followedClubs.includes(org._id)
+                                            ? handleUnfollowClub(org._id)
+                                            : handleFollowClub(org._id)
+                                    }
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px 20px',
+                                        background: followedClubs.includes(org._id) ? '#dc3545' : '#28a745',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    {followedClubs.includes(org._id) ? '⭐ Following' : '☆ Follow'}
+                                </button>
+                                <Link
+                                    to={`/organizer/${org._id}`}
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px 20px',
+                                        background: '#007bff',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                        textDecoration: 'none',
+                                        textAlign: 'center',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    View Details
+                                </Link>
+                            </div>
                         </div>
                     ))}
                 </div>

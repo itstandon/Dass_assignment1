@@ -20,6 +20,19 @@ router.get('/trending', getTrendingEvents); // Place before /:id to avoid confli
 // Organizer routes (protected) - MUST come before /:id
 router.get('/organizer/my-events', auth, isOrganizer, getOrganizerEvents);
 router.get('/organizer/analytics', auth, isOrganizer, getOrganizerAnalytics); // Global analytics
+router.get('/organizer/:id/events', auth, async (req, res) => {
+    // Get all events for a specific organizer (for participant view)
+    try {
+        const Event = require('../models/Event');
+        const events = await Event.find({ organizer: req.params.id })
+            .populate('organizer', 'organizerName')
+            .sort({ date: 1 });
+        res.json(events);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
 
 // More public routes
 router.get('/:id', getEventById);

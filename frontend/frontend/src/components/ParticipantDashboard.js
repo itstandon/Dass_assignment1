@@ -49,7 +49,11 @@ const ParticipantDashboard = () => {
     const filterRegistrations = () => {
         let filtered = registrations;
 
-        if (activeTab === 'normal') {
+        if (activeTab === 'upcoming') {
+            // Show only upcoming events
+            const now = new Date();
+            filtered = filtered.filter(r => r.event && new Date(r.event.date) >= now);
+        } else if (activeTab === 'normal') {
             filtered = filtered.filter(r => r.event?.eventType === 'Normal');
         } else if (activeTab === 'merchandise') {
             filtered = filtered.filter(r => r.event?.eventType === 'Merchandise');
@@ -58,6 +62,25 @@ const ParticipantDashboard = () => {
         } else if (activeTab === 'cancelled') {
             filtered = filtered.filter(r => r.status === 'cancelled');
         }
+
+        // Sort: upcoming events first (by date ascending), then past events (by date descending)
+        filtered.sort((a, b) => {
+            if (!a.event || !b.event) return 0;
+            const dateA = new Date(a.event.date);
+            const dateB = new Date(b.event.date);
+            const now = new Date();
+            
+            const aIsUpcoming = dateA >= now;
+            const bIsUpcoming = dateB >= now;
+            
+            // Both upcoming or both past
+            if (aIsUpcoming === bIsUpcoming) {
+                return aIsUpcoming ? dateA - dateB : dateB - dateA; // Ascending for upcoming, descending for past
+            }
+            
+            // Upcoming events come first
+            return aIsUpcoming ? -1 : 1;
+        });
 
         return filtered;
     };
@@ -113,6 +136,19 @@ const ParticipantDashboard = () => {
                     }}
                 >
                     All
+                </button>
+                <button 
+                    onClick={() => setActiveTab('upcoming')}
+                    style={{
+                        padding: '10px 20px',
+                        background: activeTab === 'upcoming' ? '#667eea' : '#f0f0f0',
+                        color: activeTab === 'upcoming' ? 'white' : '#333',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                    }}
+                >
+                    🔜 Upcoming
                 </button>
                 <button 
                     onClick={() => setActiveTab('normal')}
