@@ -14,7 +14,10 @@ const auth = async (req, res, next) => {
             return res.status(401).json({ msg: 'User not found' });
         }
         
+        console.log(`🔒 Auth check - User: ${user.email}, Role: ${user.role}, isArchived: ${user.isArchived}`);
+        
         if (user.isArchived) {
+            console.log('❌ BLOCKED - User is archived');
             return res.status(403).json({ msg: 'Account has been archived. Please contact admin.' });
         }
         

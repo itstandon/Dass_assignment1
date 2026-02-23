@@ -61,15 +61,21 @@ const ManageClubs = () => {
 
     const handleArchiveOrganizer = async (organizerId, currentStatus) => {
         const action = currentStatus === 'Active' ? 'archive (disable login)' : 'reactivate';
+        console.log('🔍 Archive request:', { organizerId, currentStatus, action });
+        
         if (!window.confirm(`Are you sure you want to ${action} this organizer?`)) return;
 
         try {
-            await axios.put(`/api/admin/organizers/${organizerId}/archive`, {}, {
+            console.log('📡 Sending archive request to:', `/api/admin/organizers/${organizerId}/archive`);
+            const response = await axios.put(`/api/admin/organizers/${organizerId}/archive`, {}, {
                 headers: { 'x-auth-token': token }
             });
+            console.log('✅ Archive response:', response.data);
+            
             alert(`Organizer ${currentStatus === 'Active' ? 'archived' : 'reactivated'} successfully`);
             fetchOrganizers();
         } catch (err) {
+            console.error('❌ Archive error:', err);
             alert(err.response?.data?.msg || 'Failed to update organizer');
         }
     };

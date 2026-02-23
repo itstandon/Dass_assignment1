@@ -116,15 +116,22 @@ exports.deleteOrganizer = async (req, res) => {
 // @access  Admin
 exports.archiveOrganizer = async (req, res) => {
     try {
+        console.log('🔍 Archive request for organizer ID:', req.params.id);
+        
         const organizer = await User.findById(req.params.id);
         
         if (!organizer || organizer.role !== 'Organizer') {
+            console.log('❌ Organizer not found or not an organizer');
             return res.status(404).json({ msg: 'Organizer not found' });
         }
 
+        console.log('📝 Current isArchived status:', organizer.isArchived);
+        
         // Toggle archive status
         organizer.isArchived = !organizer.isArchived;
         await organizer.save();
+
+        console.log('✅ New isArchived status:', organizer.isArchived);
 
         res.json({ 
             msg: `Organizer ${organizer.isArchived ? 'archived' : 'reactivated'} successfully`,
@@ -135,8 +142,8 @@ exports.archiveOrganizer = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ msg: 'Server error' });
+        console.error('❌ Archive error:', err.message);
+        res.status(500).json({ msg: 'Server error', error: err.message });
     }
 };
 
