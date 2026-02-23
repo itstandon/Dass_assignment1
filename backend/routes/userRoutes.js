@@ -4,6 +4,22 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { auth, isParticipant } = require('../middleware/auth');
 
+// @route   GET /api/user/organizers
+// @desc    Get all approved organizers (Section 9.7 - Clubs/Organizers Listing)
+// @access  Public/Authenticated
+router.get('/organizers', async (req, res) => {
+    try {
+        const organizers = await User.find({ 
+            role: 'Organizer', 
+            isArchived: false 
+        }).select('organizerName email category description contactEmail');
+        res.json(organizers);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   GET /api/user/preferences
 // @desc    Get participant profile and preferences
 router.get('/preferences', auth, isParticipant, async (req, res) => {

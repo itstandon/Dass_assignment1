@@ -10,10 +10,11 @@ const Clubs = () => {
 
     const fetchOrganizers = useCallback(async () => {
         try {
-            // Fetch all approved organizers
-            const res = await axios.get('/api/user/all-clubs', {
+            // Fetch all approved organizers (Section 9.7)
+            const res = await axios.get('/api/user/organizers', {
                 headers: { 'x-auth-token': token }
             });
+            console.log('Organizers fetched:', res.data);
             setOrganizers(res.data);
             setLoading(false);
         } catch (err) {
