@@ -14,11 +14,12 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Verify connection on startup
+// Verify connection on startup (non-blocking)
 transporter.verify((error, success) => {
     if (error) {
-        console.error('❌ Email service connection failed:', error.message);
-        console.error('   Make sure you have set up .env with correct Gmail credentials');
+        console.warn('⚠️ Email service connection failed (non-critical):', error.message);
+        console.warn('   Email notifications will be disabled, but app will continue working');
+        console.warn('   To fix: Set up .env with Gmail credentials');
     } else {
         console.log('✅ Email service connected successfully!');
     }
