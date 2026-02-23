@@ -29,8 +29,22 @@ const OrganizerDetail = () => {
                 console.log('Events:', eventsRes.data);
                 
                 const now = new Date();
-                const upcoming = eventsRes.data.filter(event => new Date(event.date) >= now);
-                const past = eventsRes.data.filter(event => new Date(event.date) < now);
+                
+                // Upcoming: event hasn't started yet (startDate > now)
+                const upcoming = eventsRes.data.filter(event => {
+                    const startDate = event.startDate ? new Date(event.startDate) : null;
+                    return startDate && startDate > now;
+                });
+                
+                // Past: event has ended (endDate < now)
+                const past = eventsRes.data.filter(event => {
+                    const endDate = event.endDate ? new Date(event.endDate) : null;
+                    return endDate && endDate < now;
+                });
+                
+                console.log('Upcoming events:', upcoming.length);
+                console.log('Past events:', past.length);
+                
                 setUpcomingEvents(upcoming);
                 setPastEvents(past);
                 setLoading(false);
@@ -123,11 +137,11 @@ const OrganizerDetail = () => {
                                         marginBottom: '10px',
                                         borderRadius: '5px'
                                     }}>
-                                        <h4>{event.name}</h4>
+                                        <h4>{event.title || event.name}</h4>
                                         <p><strong>Type:</strong> {event.eventType}</p>
-                                        <p><strong>Date:</strong> {new Date(event.date).toLocaleDateString()}</p>
-                                        <p><strong>Time:</strong> {event.time}</p>
-                                        <p><strong>Venue:</strong> {event.venue}</p>
+                                        <p><strong>Date:</strong> {event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBA'}</p>
+                                        <p><strong>Time:</strong> {event.time || 'TBA'}</p>
+                                        <p><strong>Venue:</strong> {event.venue || 'TBA'}</p>
                                     </div>
                                 ))
                             )}
@@ -147,11 +161,11 @@ const OrganizerDetail = () => {
                                         borderRadius: '5px',
                                         opacity: 0.7
                                     }}>
-                                        <h4>{event.name}</h4>
+                                        <h4>{event.title || event.name}</h4>
                                         <p><strong>Type:</strong> {event.eventType}</p>
-                                        <p><strong>Date:</strong> {new Date(event.date).toLocaleDateString()}</p>
-                                        <p><strong>Time:</strong> {event.time}</p>
-                                        <p><strong>Venue:</strong> {event.venue}</p>
+                                        <p><strong>Date:</strong> {event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBA'}</p>
+                                        <p><strong>Time:</strong> {event.time || 'TBA'}</p>
+                                        <p><strong>Venue:</strong> {event.venue || 'TBA'}</p>
                                     </div>
                                 ))
                             )}
