@@ -23,6 +23,32 @@ const OrganizerEventDetails = () => {
     const [updateError, setUpdateError] = useState(null);
     const [updateSuccess, setUpdateSuccess] = useState(false);
 
+    // Calculate actual event status based on dates
+    const getEventStatus = (eventData) => {
+        if (!eventData) return 'Scheduled';
+        
+        const now = new Date();
+        const startDate = eventData.startDate ? new Date(eventData.startDate) : null;
+        const endDate = eventData.endDate ? new Date(eventData.endDate) : null;
+
+        // If event is marked as Draft, keep it as Draft
+        if (eventData.status === 'Draft') return 'Draft';
+
+        // If no dates, use database status
+        if (!startDate || !endDate) return eventData.status || 'Scheduled';
+
+        // Calculate based on dates
+        if (endDate < now) {
+            return 'Completed'; // Event has ended
+        } else if (startDate <= now && now <= endDate) {
+            return 'Ongoing'; // Event is currently happening
+        } else if (startDate > now) {
+            return 'Scheduled'; // Event hasn't started yet
+        }
+
+        return eventData.status || 'Scheduled';
+    };
+
     useEffect(() => {
         const fetchEventDetails = async () => {
             try {
@@ -175,7 +201,7 @@ const OrganizerEventDetails = () => {
                     <h2 className="mb-2">{event.title}</h2>
                     <div className="d-flex gap-2">
                         <Badge bg={event.eventType === 'Normal' ? 'info' : 'warning'}>{event.eventType}</Badge>
-                        <Badge bg={getStatusBg(event.status)}>{event.status}</Badge>
+                        <Badge bg={getStatusBg(getEventStatus(event))}>{getEventStatus(event)}</Badge>
                         <Badge bg="secondary">{event.eligibility}</Badge>
                     </div>
                 </div>

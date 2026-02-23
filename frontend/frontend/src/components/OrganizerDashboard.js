@@ -67,11 +67,24 @@ const OrganizerDashboard = () => {
     completedEvents.forEach(event => {
         if (event.registrations && Array.isArray(event.registrations)) {
             totalRegistrations += event.registrations.length;
-            if (event.eventType === 'Normal') {
-                totalRevenue += (event.registrations.length * (event.registrationFee || 0));
-            } else if (event.eventType === 'Merchandise') {
-                totalRevenue += (event.registrations.length * (event.price || 0));
-            }
+            
+            // Count attended participants
+            const attendedCount = event.registrations.filter(reg => 
+                reg.attendanceStatus === 'attended' || reg.status === 'attended'
+            ).length;
+            totalAttended += attendedCount;
+            
+            // Calculate revenue properly
+            event.registrations.forEach(reg => {
+                if (event.eventType === 'Normal') {
+                    totalRevenue += (event.registrationFee || 0);
+                } else if (event.eventType === 'Merchandise') {
+                    // For merchandise, use quantity * price
+                    const quantity = reg.quantity || 1;
+                    const price = event.price || 0;
+                    totalRevenue += (quantity * price);
+                }
+            });
         }
     });
 
