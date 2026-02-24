@@ -69,6 +69,14 @@ const EventSchema = new mongoose.Schema({
         required: true 
     },
 
+    // Event Status [Section 9.9 - 4 Marks]
+    // Controls visibility and editability of the event
+    status: {
+        type: String,
+        enum: ['Draft', 'Published', 'Closed', 'Completed'],
+        default: 'Draft'
+    },
+
     // Event Tags [cite: 82]
     tags: [{
         type: String,
