@@ -178,28 +178,39 @@ const CreateEventAdvanced = () => {
 
     // ==================== SUBMIT HANDLER ====================
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e, status = 'Published') => {
         e.preventDefault();
 
         try {
-            // Validation
-            if (!formData.title || !formData.description || !formData.registrationDeadline || !formData.startDate || !formData.endDate) {
-                alert('Please fill in all core required fields');
-                return;
+            // For drafts, only require a title
+            if (status === 'Draft') {
+                if (!formData.title) {
+                    alert('Please provide at least a title to save as draft');
+                    return;
+                }
+            } else {
+                // For published events, validate all required fields
+                if (!formData.title || !formData.description || !formData.registrationDeadline || !formData.startDate || !formData.endDate) {
+                    alert('Please fill in all core required fields');
+                    return;
+                }
             }
 
             const startDate = new Date(formData.startDate);
             const endDate = new Date(formData.endDate);
             const deadline = new Date(formData.registrationDeadline);
 
-            if (deadline >= startDate) {
-                alert('Registration deadline must be before event start date');
-                return;
-            }
+            // Only validate dates for published events
+            if (status === 'Published') {
+                if (deadline >= startDate) {
+                    alert('Registration deadline must be before event start date');
+                    return;
+                }
 
-            if (startDate >= endDate) {
-                alert('Start date must be before end date');
-                return;
+                if (startDate >= endDate) {
+                    alert('Start date must be before end date');
+                    return;
+                }
             }
 
             let payload = {
@@ -210,40 +221,47 @@ const CreateEventAdvanced = () => {
                 registrationDeadline: formData.registrationDeadline,
                 startDate: formData.startDate,
                 endDate: formData.endDate,
-                registrationLimit: parseInt(formData.registrationLimit),
-                tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : []
+                registrationLimit: parseInt(formData.registrationLimit) || 1000,
+                tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
+                status // Add the status to the payload
             };
 
             if (eventType === 'Normal') {
-                if (normalFields.registrationForm.length === 0) {
-                    alert('Please add at least one registration form field');
-                    return;
-                }
+                // For published events, validate form fields
+                if (status === 'Published') {
+                    if (normalFields.registrationForm.length === 0) {
+                        alert('Please add at least one registration form field');
+                        return;
+                    }
 
-                if (!normalFields.location || !normalFields.capacity) {
-                    alert('Please fill in location and capacity for Normal events');
-                    return;
+                    if (!normalFields.location || !normalFields.capacity) {
+                        alert('Please fill in location and capacity for Normal events');
+                        return;
+                    }
                 }
 
                 payload = {
                     ...payload,
                     category: normalFields.category,
                     location: normalFields.location,
-                    capacity: parseInt(normalFields.capacity),
+                    capacity: parseInt(normalFields.capacity) || 0,
                     registrationFee: parseInt(normalFields.registrationFee) || 0,
                     registrationForm: normalFields.registrationForm
                 };
             }
 
             if (eventType === 'Merchandise') {
-                if (!merchandiseFields.price || !merchandiseFields.quantity || !merchandiseFields.totalStock) {
-                    alert('Please fill in price, quantity, and total stock');
-                    return;
-                }
+                // For published events, validate merchandise fields
+                if (status === 'Published') {
+                    if (!merchandiseFields.price || !merchandiseFields.quantity || !merchandiseFields.totalStock) {
+                        alert('Please fill in price, quantity, and total stock');
+                        return;
+                    }
 
-                if (merchandiseFields.merchandiseItems[0].variants.length === 0) {
-                    alert('Please add at least one merchandise variant');
-                    return;
+                    if (merchandiseFields.merchandiseItems[0].variants.length === 0) {
+                        alert('Please add at least one merchandise variant');
+                        return;
+                    }
                 }
 
                 payload = {
@@ -261,7 +279,7 @@ const CreateEventAdvanced = () => {
                 headers: { 'x-auth-token': token }
             });
 
-            alert('Event created successfully!');
+            alert(`Event ${status === 'Draft' ? 'saved as draft' : 'published'} successfully!`);
             navigate('/dashboard');
         } catch (err) {
             console.error(err.response?.data || err.message);
@@ -704,8 +722,11 @@ const CreateEventAdvanced = () => {
 
                     {/* ==================== SUBMIT SECTION ==================== */}
                     <div className="form-section form-actions">
-                        <button type="submit" className="btn-submit">
-                            Create Event
+                        <button type="button" onClick={(e) => handleSubmit(e, 'Draft')} className="btn-draft">
+                            Save as Draft
+                        </button>
+                        <button type="submit" onClick={(e) => handleSubmit(e, 'Published')} className="btn-submit">
+                            Publish Event
                         </button>
                         <button type="button" onClick={() => navigate('/dashboard')} className="btn-cancel">
                             Cancel
