@@ -30,33 +30,34 @@ const CreateEvent = () => {
         setFormData({ ...formData });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e, status) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
             const payload = {
                 ...formData,
                 eventType,
+                status, // Add status to the payload
+                registrationLimit: formData.registrationLimit ? parseInt(formData.registrationLimit) : 1000, // Default limit
                 capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
                 price: formData.price ? parseFloat(formData.price) : undefined,
                 quantity: formData.quantity ? parseInt(formData.quantity) : undefined,
             };
 
-            /*const res = await axios.post('/api/events/create', payload, {
-                headers: { 'x-auth-token': token }
-            });*/
+            // Clean up undefined keys
             Object.keys(payload).forEach(key => 
-                payload[key] === undefined && delete payload[key]
+                (payload[key] === undefined || payload[key] === '') && delete payload[key]
             );
 
             await axios.post('/api/events/create', payload, {
                 headers: { 'x-auth-token': token }
             });
 
-            alert('Event created successfully!');
+            alert(`Event ${status === 'Draft' ? 'saved as draft' : 'published'} successfully!`);
             navigate('/organizer-dashboard');
         } catch (err) {
-            alert(err.response?.data?.msg || 'Failed to create event');
+            const errorMsg = err.response?.data?.errors ? err.response.data.errors.map(e => e.msg).join(', ') : (err.response?.data?.msg || 'Failed to process event');
+            alert(errorMsg);
             console.error(err);
         }
     };
@@ -174,7 +175,10 @@ const CreateEvent = () => {
                     </>
                 )}
 
-                <button type="submit">Create Event</button>
+                <div className="form-actions">
+                    <button type="button" onClick={(e) => handleSubmit(e, 'Draft')} className="draft-button">Save as Draft</button>
+                    <button type="submit" onClick={(e) => handleSubmit(e, 'Published')}>Publish Event</button>
+                </div>
             </form>
         </div>
     );
