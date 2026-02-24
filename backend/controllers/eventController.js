@@ -325,7 +325,7 @@ exports.getEventById = async (req, res) => {
 };
 
 // @route   PUT /api/events/:id
-// @desc    Update event (organizer only) [Section 8]
+// @desc    Update event (organizer only) [Section 9.9 - Editing Rules]
 // @access  Organizer
 exports.updateEvent = async (req, res) => {
     try {
@@ -335,79 +335,75 @@ exports.updateEvent = async (req, res) => {
             return res.status(404).json({ msg: 'Event not found' });
         }
 
-        // Ensure only the organizer can edit
         if (event.organizer.toString() !== req.user.id) {
             return res.status(403).json({ msg: 'Not authorized to update this event' });
         }
 
-        // Update allowed fields [Section 8]
-        const {
-            title,
-            description,
-            eligibility,
-            registrationDeadline,
-            startDate,
-            endDate,
-            registrationLimit,
-            tags,
-            status,
-            // Normal event updates
-            registrationForm,
-            registrationFee,
-            category,
-            location,
-            capacity,
-            // Merchandise event updates
-            merchandiseItems,
-            totalStock,
-            purchaseLimitPerParticipant,
-            price,
-            merchandiseType,
-            quantity
-        } = req.body;
+        const { status: newStatus, ...updates } = req.body;
+        const currentStatus = event.status || 'Published'; // Default to Published if no status exists
+        const now = new Date();
+        const eventStartDate = new Date(event.startDate);
+        const eventEndDate = new Date(event.endDate);
 
-        // Update core fields
-        if (title) event.title = title;
-        if (description) event.description = description;
-        if (eligibility) event.eligibility = eligibility;
-        if (registrationDeadline) {
-            if (new Date(registrationDeadline) > new Date(startDate || event.startDate)) {
-                return res.status(400).json({ msg: 'Registration deadline must be before event start date' });
+        // Determine live status for rule application
+        let liveStatus = 'Scheduled';
+        if (now >= eventStartDate && now <= eventEndDate) liveStatus = 'Ongoing';
+        else if (now > eventEndDate) liveStatus = 'Completed';
+
+        // --- EDITING RULES BASED ON STATUS [Section 9.9] ---
+
+        if (currentStatus === 'Draft') {
+            // Drafts: Free edits, can be published
+            Object.assign(event, updates);
+            if (newStatus === 'Published') {
+                // Validate all required fields before publishing
+                const requiredFields = ['title', 'description', 'eventType', 'registrationDeadline', 'startDate', 'endDate', 'registrationLimit'];
+                for (const field of requiredFields) {
+                    if (!event[field]) {
+                        return res.status(400).json({ msg: `Cannot publish. Missing required field: ${field}` });
+                    }
+                }
+                event.status = 'Published';
             }
-            event.registrationDeadline = registrationDeadline;
-        }
-        if (startDate) {
-            if (new Date(startDate) > new Date(endDate || event.endDate)) {
-                return res.status(400).json({ msg: 'Start date must be before end date' });
+        } else if (currentStatus === 'Published') {
+            // Published: Limited edits - only description, deadline extension, and limit increase
+            const allowedUpdates = ['description', 'registrationDeadline', 'registrationLimit'];
+            for (const key in updates) {
+                if (allowedUpdates.includes(key)) {
+                    // For registration form - lock it if there are registrations
+                    if (key === 'registrationForm' && event.registrations && event.registrations.length > 0) {
+                        return res.status(400).json({ msg: 'Registration form is locked after first registration' });
+                    }
+                    event[key] = updates[key];
+                } else if (key !== 'registrationForm') { // Don't error for registrationForm, just block it
+                    return res.status(400).json({ msg: `Cannot update '${key}' for a published event. Only description, registrationDeadline, and registrationLimit can be updated.` });
+                }
             }
-            event.startDate = startDate;
-        }
-        if (endDate) event.endDate = endDate;
-        if (registrationLimit) event.registrationLimit = registrationLimit;
-        if (tags) event.tags = tags;
-        if (status) event.status = status;
-
-        // Update Normal event fields
-        if (event.eventType === 'Normal') {
-            if (registrationForm) event.registrationForm = registrationForm;
-            if (registrationFee !== undefined) event.registrationFee = registrationFee;
-            if (category) event.category = category;
-            if (location) event.location = location;
-            if (capacity) event.capacity = capacity;
-        }
-
-        // Update Merchandise event fields
-        if (event.eventType === 'Merchandise') {
-            if (merchandiseItems) event.merchandiseItems = merchandiseItems;
-            if (totalStock) event.totalStock = totalStock;
-            if (purchaseLimitPerParticipant) event.purchaseLimitPerParticipant = purchaseLimitPerParticipant;
-            if (price) event.price = price;
-            if (merchandiseType) event.merchandiseType = merchandiseType;
-            if (quantity) event.quantity = quantity;
+            // Can be closed or moved to completed
+            if (newStatus && ['Closed', 'Completed'].includes(newStatus)) {
+                event.status = newStatus;
+            }
+        } else if (liveStatus === 'Ongoing' || liveStatus === 'Completed' || currentStatus === 'Closed' || currentStatus === 'Completed') {
+            // Ongoing/Completed/Closed: Only status changes allowed
+            if (newStatus && ['Completed', 'Closed'].includes(newStatus)) {
+                event.status = newStatus;
+            } else if (Object.keys(updates).length > 0) {
+                return res.status(400).json({ msg: 'No edits are allowed for ongoing, completed, or closed events except for status changes.' });
+            }
         }
 
         await event.save();
         res.json({ msg: 'Event updated successfully', event });
+
+    } catch (err) {
+        console.error(err.message);
+        if (err.name === 'ValidationError') {
+            const messages = Object.values(err.errors).map(val => val.message);
+            return res.status(400).json({ msg: messages.join(', ') });
+        }
+        res.status(500).json({ msg: 'Server error', error: err.message });
+    }
+};
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ msg: 'Server error', error: err.message });
