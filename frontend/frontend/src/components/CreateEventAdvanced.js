@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/CreateEventAdvanced.css';
 
 const CreateEventAdvanced = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const editEventId = searchParams.get('edit'); // Get event ID from URL query
     const token = localStorage.getItem('token');
     const [eventType, setEventType] = useState('Normal');
+    const [isEditMode, setIsEditMode] = useState(false);
 
     // ==================== CORE FIELDS ====================
     const [formData, setFormData] = useState({
@@ -45,6 +48,66 @@ const CreateEventAdvanced = () => {
             }
         ]
     });
+
+    // ==================== LOAD EVENT FOR EDITING ====================
+    useEffect(() => {
+        const loadEventForEditing = async () => {
+            if (editEventId) {
+                try {
+                    setIsEditMode(true);
+                    const res = await axios.get(`/api/events/${editEventId}`, {
+                        headers: { 'x-auth-token': token }
+                    });
+                    const event = res.data;
+
+                    // Set event type
+                    setEventType(event.eventType || 'Normal');
+
+                    // Set core fields
+                    setFormData({
+                        title: event.title || '',
+                        description: event.description || '',
+                        eligibility: event.eligibility || 'Everyone',
+                        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : '',
+                        startDate: event.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : '',
+                        endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
+                        registrationLimit: event.registrationLimit || '',
+                        tags: event.tags ? event.tags.join(', ') : ''
+                    });
+
+                    // Set event-type specific fields
+                    if (event.eventType === 'Normal') {
+                        setNormalFields({
+                            category: event.category || 'Workshop',
+                            location: event.location || '',
+                            capacity: event.capacity || '',
+                            registrationFee: event.registrationFee || 0,
+                            registrationForm: event.registrationForm || []
+                        });
+                    } else if (event.eventType === 'Merchandise') {
+                        setMerchandiseFields({
+                            merchandiseType: event.merchandiseType || 'T-Shirt',
+                            price: event.price || '',
+                            quantity: event.quantity || '',
+                            totalStock: event.totalStock || '',
+                            purchaseLimitPerParticipant: event.purchaseLimitPerParticipant || 1,
+                            merchandiseItems: event.merchandiseItems || [{
+                                name: 'T-Shirt Bundle',
+                                size: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+                                color: ['Black', 'White'],
+                                variants: []
+                            }]
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error loading event:', err);
+                    alert('Failed to load event for editing');
+                }
+            }
+        };
+
+        loadEventForEditing();
+    }, [editEventId, token]);
 
     // ==================== DYNAMIC FORM BUILDER ====================
     const [currentFormField, setCurrentFormField] = useState({
@@ -275,22 +338,30 @@ const CreateEventAdvanced = () => {
                 };
             }
 
-            await axios.post('/api/events/create', payload, {
-                headers: { 'x-auth-token': token }
-            });
+            // Use PUT for editing, POST for creating
+            if (isEditMode && editEventId) {
+                await axios.put(`/api/events/${editEventId}`, payload, {
+                    headers: { 'x-auth-token': token }
+                });
+                alert(`Event ${status === 'Draft' ? 'updated as draft' : 'updated and published'} successfully!`);
+            } else {
+                await axios.post('/api/events/create', payload, {
+                    headers: { 'x-auth-token': token }
+                });
+                alert(`Event ${status === 'Draft' ? 'saved as draft' : 'published'} successfully!`);
+            }
 
-            alert(`Event ${status === 'Draft' ? 'saved as draft' : 'published'} successfully!`);
             navigate('/dashboard');
         } catch (err) {
             console.error(err.response?.data || err.message);
-            alert(err.response?.data?.msg || 'Error creating event');
+            alert(err.response?.data?.msg || `Error ${isEditMode ? 'updating' : 'creating'} event`);
         }
     };
 
     return (
         <div className="create-event-advanced">
             <div className="container">
-                <h2>Create Event [Section 8 - Event Attributes]</h2>
+                <h2>{isEditMode ? 'Edit Event' : 'Create Event [Section 8 - Event Attributes]'}</h2>
 
                 <form onSubmit={handleSubmit}>
                     {/* ==================== CORE SECTION ==================== */}
