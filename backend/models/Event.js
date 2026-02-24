@@ -205,13 +205,7 @@ const EventSchema = new mongoose.Schema({
     },
 
     // ==================== COMMON FIELDS ====================
-    // Event Status
-    status: {
-        type: String,
-        enum: ['Scheduled', 'Ongoing', 'Completed', 'Cancelled'],
-        default: 'Scheduled'
-    },
-
+    
     // Registrations (populated later when users register)
     registrations: [{ 
         type: mongoose.Schema.Types.ObjectId, 
