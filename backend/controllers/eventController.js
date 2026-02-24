@@ -18,6 +18,7 @@ exports.createEvent = async (req, res) => {
             endDate,
             registrationLimit,
             tags,
+            status, // Event Status [Section 9.9]
             
             // For Normal Events [Section 8]
             registrationForm,
@@ -35,108 +36,115 @@ exports.createEvent = async (req, res) => {
             quantity
         } = req.body;
 
-        // ========== CORE VALIDATION [Section 8] ==========
-        // Required core fields
-        if (!title || !description || !eventType || !registrationDeadline || !startDate || !endDate || !registrationLimit) {
-            return res.status(400).json({ 
-                msg: 'Missing required core fields: title, description, eventType, registrationDeadline, startDate, endDate, registrationLimit' 
-            });
-        }
-
-        // Validation: Event type is either 'Normal' or 'Merchandise'
-        if (!['Normal', 'Merchandise'].includes(eventType)) {
-            return res.status(400).json({ msg: 'Invalid event type. Must be Normal or Merchandise' });
-        }
-
-        // Validation: Eligibility is valid
-        if (!['IIIT', 'NonIIIT', 'Everyone'].includes(eligibility || 'Everyone')) {
-            return res.status(400).json({ msg: 'Invalid eligibility. Must be IIIT, NonIIIT, or Everyone' });
-        }
-
-        // Validation: Dates
-        if (new Date(registrationDeadline) > new Date(startDate)) {
-            return res.status(400).json({ msg: 'Registration deadline must be before event start date' });
-        }
-
-        if (new Date(startDate) > new Date(endDate)) {
-            return res.status(400).json({ msg: 'Start date must be before end date' });
-        }
-
-        // ========== NORMAL EVENT VALIDATION [Section 8] ==========
-        if (eventType === 'Normal') {
-            if (!registrationForm || !Array.isArray(registrationForm) || registrationForm.length === 0) {
+        // ========== DRAFT/PUBLISH VALIDATION [Section 9.9] ==========
+        // If saving as a draft, only a title is required.
+        if (status === 'Draft') {
+            if (!title) {
+                return res.status(400).json({ msg: 'A title is required to save a draft.' });
+            }
+            // For drafts, skip all other validations
+        } else {
+            // For publishing, all core fields are required.
+            if (!title || !description || !eventType || !registrationDeadline || !startDate || !endDate || !registrationLimit) {
                 return res.status(400).json({ 
-                    msg: 'Normal events require: registrationForm (array of fields)' 
+                    msg: 'Missing required core fields: title, description, eventType, registrationDeadline, startDate, endDate, registrationLimit' 
                 });
             }
 
-            if (registrationFee === undefined || registrationFee === null) {
-                return res.status(400).json({ 
-                    msg: 'Normal events require: registrationFee' 
-                });
+            // Validation: Event type is either 'Normal' or 'Merchandise'
+            if (!['Normal', 'Merchandise'].includes(eventType)) {
+                return res.status(400).json({ msg: 'Invalid event type. Must be Normal or Merchandise' });
             }
 
-            if (!category || !location || !capacity) {
-                return res.status(400).json({ 
-                    msg: 'Normal events require: category, location, capacity' 
-                });
+            // Validation: Eligibility is valid
+            if (!['IIIT', 'NonIIIT', 'Everyone'].includes(eligibility || 'Everyone')) {
+                return res.status(400).json({ msg: 'Invalid eligibility. Must be IIIT, NonIIIT, or Everyone' });
             }
 
-            // Validate registration form fields
-            for (let field of registrationForm) {
-                if (!field.fieldName || !field.fieldType) {
+            // Date validations for published events
+            if (new Date(registrationDeadline) > new Date(startDate)) {
+                return res.status(400).json({ msg: 'Registration deadline must be before event start date' });
+            }
+            if (new Date(startDate) > new Date(endDate)) {
+                return res.status(400).json({ msg: 'Start date must be before end date' });
+            }
+
+            // ========== NORMAL EVENT VALIDATION [Section 8] ==========
+            if (eventType === 'Normal') {
+                if (!registrationForm || !Array.isArray(registrationForm) || registrationForm.length === 0) {
                     return res.status(400).json({ 
-                        msg: 'Each registration form field must have fieldName and fieldType' 
-                    });
-                }
-                if (!['text', 'email', 'number', 'date', 'select', 'checkbox', 'textarea'].includes(field.fieldType)) {
-                    return res.status(400).json({ 
-                        msg: 'Invalid fieldType. Allowed: text, email, number, date, select, checkbox, textarea' 
-                    });
-                }
-            }
-        }
-
-        // ========== MERCHANDISE EVENT VALIDATION [Section 8] ==========
-        if (eventType === 'Merchandise') {
-            if (!merchandiseItems || !Array.isArray(merchandiseItems) || merchandiseItems.length === 0) {
-                return res.status(400).json({ 
-                    msg: 'Merchandise events require: merchandiseItems (array with size, color, variants)' 
-                });
-            }
-
-            if (!totalStock || totalStock < 1) {
-                return res.status(400).json({ 
-                    msg: 'Merchandise events require: totalStock (positive number)' 
-                });
-            }
-
-            if (!purchaseLimitPerParticipant || purchaseLimitPerParticipant < 1) {
-                return res.status(400).json({ 
-                    msg: 'Merchandise events require: purchaseLimitPerParticipant (positive number)' 
-                });
-            }
-
-            // Validate payment instructions (required for merchandise)
-            if (!req.body.paymentInstructions || !req.body.paymentInstructions.upiId) {
-                return res.status(400).json({
-                    msg: 'Merchandise events require payment instructions with UPI ID'
-                });
-            }
-
-            // Validate merchandise items structure
-            for (let item of merchandiseItems) {
-                if (!item.name || !Array.isArray(item.size) || !Array.isArray(item.color) || !Array.isArray(item.variants)) {
-                    return res.status(400).json({ 
-                        msg: 'Each merchandise item must have: name, size (array), color (array), variants (array)' 
+                        msg: 'Normal events require: registrationForm (array of fields)' 
                     });
                 }
 
-                for (let variant of item.variants) {
-                    if (!variant.size || !variant.color || variant.stock === undefined || !variant.price) {
+                if (registrationFee === undefined || registrationFee === null) {
+                    return res.status(400).json({ 
+                        msg: 'Normal events require: registrationFee' 
+                    });
+                }
+
+                if (!category || !location || !capacity) {
+                    return res.status(400).json({ 
+                        msg: 'Normal events require: category, location, capacity' 
+                    });
+                }
+
+                // Validate registration form fields
+                for (let field of registrationForm) {
+                    if (!field.fieldName || !field.fieldType) {
                         return res.status(400).json({ 
-                            msg: 'Each variant must have: size, color, stock, price' 
+                            msg: 'Each registration form field must have fieldName and fieldType' 
                         });
+                    }
+                    if (!['text', 'email', 'number', 'date', 'select', 'checkbox', 'textarea'].includes(field.fieldType)) {
+                        return res.status(400).json({ 
+                            msg: 'Invalid fieldType. Allowed: text, email, number, date, select, checkbox, textarea' 
+                        });
+                    }
+                }
+            }
+
+            // ========== MERCHANDISE EVENT VALIDATION [Section 8] ==========
+            if (eventType === 'Merchandise') {
+                if (!merchandiseItems || !Array.isArray(merchandiseItems) || merchandiseItems.length === 0) {
+                    return res.status(400).json({ 
+                        msg: 'Merchandise events require: merchandiseItems (array with size, color, variants)' 
+                    });
+                }
+
+                if (!totalStock || totalStock < 1) {
+                    return res.status(400).json({ 
+                        msg: 'Merchandise events require: totalStock (positive number)' 
+                    });
+                }
+
+                if (!purchaseLimitPerParticipant || purchaseLimitPerParticipant < 1) {
+                    return res.status(400).json({ 
+                        msg: 'Merchandise events require: purchaseLimitPerParticipant (positive number)' 
+                    });
+                }
+
+                // Validate payment instructions (required for merchandise)
+                if (!req.body.paymentInstructions || !req.body.paymentInstructions.upiId) {
+                    return res.status(400).json({
+                        msg: 'Merchandise events require payment instructions with UPI ID'
+                    });
+                }
+
+                // Validate merchandise items structure
+                for (let item of merchandiseItems) {
+                    if (!item.name || !Array.isArray(item.size) || !Array.isArray(item.color) || !Array.isArray(item.variants)) {
+                        return res.status(400).json({ 
+                            msg: 'Each merchandise item must have: name, size (array), color (array), variants (array)' 
+                        });
+                    }
+
+                    for (let variant of item.variants) {
+                        if (!variant.size || !variant.color || variant.stock === undefined || !variant.price) {
+                            return res.status(400).json({ 
+                                msg: 'Each variant must have: size, color, stock, price' 
+                            });
+                        }
                     }
                 }
             }
@@ -144,7 +152,8 @@ exports.createEvent = async (req, res) => {
 
         // ========== CREATE EVENT OBJECT ==========
         const eventData = {
-            // Core attributes
+            organizer: req.user.id,
+            status: status || 'Draft', // Default to Draft if no status is provided
             title,
             description,
             eventType,
@@ -153,8 +162,7 @@ exports.createEvent = async (req, res) => {
             startDate,
             endDate,
             registrationLimit,
-            tags: tags || [],
-            organizer: req.user.id
+            tags: tags || []
         };
 
         // Add event-type-specific fields
@@ -168,7 +176,6 @@ exports.createEvent = async (req, res) => {
 
         if (eventType === 'Merchandise') {
             eventData.merchandiseItems = merchandiseItems;
-            // eventData.totalStock = totalStock;
             eventData.totalStock = totalStock || quantity 
                 ? parseInt(totalStock || quantity) 
                 : 0;
@@ -176,21 +183,23 @@ exports.createEvent = async (req, res) => {
             eventData.price = price;
             eventData.merchandiseType = merchandiseType;
             eventData.quantity = quantity;
-            // Add payment instructions for merchandise events
             eventData.paymentInstructions = req.body.paymentInstructions;
         }
 
         const event = new Event(eventData);
         await event.save();
 
-        const organizer = await User.findById(req.user.id);
-        if (organizer.discordWebhookUrl) {
-            try {
-                await axios.post(organizer.discordWebhookUrl, {
-                    content: `📢 **New Event Published!**\n**Name:** ${event.title}\n**Type:** ${event.eventType}\n**Link:** ${process.env.FRONTEND_URL}/events/${event._id}`
-                });
-            } catch (webhookErr) {
-                console.error("Discord notification failed");
+        // If published, send Discord notification
+        if (event.status === 'Published') {
+            const organizer = await User.findById(req.user.id);
+            if (organizer.discordWebhookUrl) {
+                try {
+                    await axios.post(organizer.discordWebhookUrl, {
+                        content: `📢 **New Event Published!**\n**Name:** ${event.title}\n**Type:** ${event.eventType}\n**Link:** ${process.env.FRONTEND_URL}/events/${event._id}`
+                    });
+                } catch (webhookErr) {
+                    console.error("Discord notification failed for new event:", webhookErr.message);
+                }
             }
         }
 
@@ -198,12 +207,17 @@ exports.createEvent = async (req, res) => {
         await event.populate('organizer', 'organizerName email');
 
         res.status(201).json({ 
-            msg: 'Event created successfully with all attributes', 
+            msg: `Event successfully ${event.status === 'Draft' ? 'saved as a draft' : 'published'}.`, 
             event 
         });
 
     } catch (err) {
         console.error(err.message);
+        // Provide more specific validation error messages if available
+        if (err.name === 'ValidationError') {
+            const messages = Object.values(err.errors).map(val => val.message);
+            return res.status(400).json({ msg: messages.join(', ') });
+        }
         res.status(500).json({ msg: 'Server error', error: err.message });
     }
 };
@@ -401,11 +415,6 @@ exports.updateEvent = async (req, res) => {
             const messages = Object.values(err.errors).map(val => val.message);
             return res.status(400).json({ msg: messages.join(', ') });
         }
-        res.status(500).json({ msg: 'Server error', error: err.message });
-    }
-};
-    } catch (err) {
-        console.error(err.message);
         res.status(500).json({ msg: 'Server error', error: err.message });
     }
 };
