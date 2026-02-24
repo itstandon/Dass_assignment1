@@ -7,7 +7,7 @@ const EventSchema = new mongoose.Schema({
     // Event Name [cite: 82]
     title: { 
         type: String, 
-        required: true,
+        required: true, // Always required, even for drafts
         trim: true,
         minlength: 3,
         maxlength: 100
@@ -16,7 +16,7 @@ const EventSchema = new mongoose.Schema({
     // Event Description [cite: 82]
     description: { 
         type: String, 
-        required: true,
+        required: function() { return this.status === 'Published'; }, // Only required for published events
         minlength: 10,
         maxlength: 1000
     },
@@ -26,39 +26,38 @@ const EventSchema = new mongoose.Schema({
     eventType: {
         type: String,
         enum: ['Normal', 'Merchandise'],
-        required: true
+        required: function() { return this.status === 'Published'; } // Only required for published events
     },
 
     // Eligibility criteria for participation [cite: 82]
     eligibility: {
         type: String,
         enum: ['IIIT', 'NonIIIT', 'Everyone'],
-        default: 'Everyone',
-        required: true
+        default: 'Everyone'
     },
 
     // Registration Deadline [cite: 82]
     registrationDeadline: {
         type: Date,
-        required: true
+        required: function() { return this.status === 'Published'; } // Only required for published events
     },
 
     // Event Start Date [cite: 82]
     startDate: { 
         type: Date, 
-        required: true 
+        required: function() { return this.status === 'Published'; } // Only required for published events
     },
 
     // Event End Date [cite: 82]
     endDate: { 
         type: Date, 
-        required: true 
+        required: function() { return this.status === 'Published'; } // Only required for published events
     },
 
     // Registration Limit [cite: 82]
     registrationLimit: {
         type: Number,
-        required: true,
+        required: function() { return this.status === 'Published'; }, // Only required for published events
         min: 1
     },
 
