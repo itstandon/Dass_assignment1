@@ -149,6 +149,20 @@ const OrganizerDashboard = () => {
                 </Row>
             </section>
 
+            {/* ===== DRAFT EVENTS SECTION ===== */}
+            {categorizedEvents.Draft.length > 0 && (
+                <section className="mb-5">
+                    <h4 className="text-warning mb-3">📝 Draft Events (Not Published)</h4>
+                    <Row xs={1} md={2} lg={3} className="g-4">
+                        {categorizedEvents.Draft.map(event => (
+                            <Col key={event._id}>
+                                <EventCard event={event} calculatedStatus={getEventStatus(event)} isDraft />
+                            </Col>
+                        ))}
+                    </Row>
+                </section>
+            )}
+
             {/* ===== ONGOING EVENTS SECTION ===== */}
             {categorizedEvents.Ongoing.length > 0 && (
                 <section className="mb-5">
@@ -194,8 +208,8 @@ const OrganizerDashboard = () => {
     );
 };
 
-const EventCard = ({ event, calculatedStatus, isPast }) => (
-    <Card className={`h-100 shadow-sm ${isPast ? 'bg-light' : ''}`}>
+const EventCard = ({ event, calculatedStatus, isPast, isDraft }) => (
+    <Card className={`h-100 shadow-sm ${isPast ? 'bg-light' : ''} ${isDraft ? 'border-warning' : ''}`}>
         <Card.Body>
             <div className="d-flex justify-content-between align-items-start mb-2">
                 <Badge bg={event.eventType === 'Normal' ? 'info' : 'warning'}>{event.eventType}</Badge>
@@ -203,25 +217,37 @@ const EventCard = ({ event, calculatedStatus, isPast }) => (
             </div>
             <Card.Title>{event.title}</Card.Title>
             <Card.Text className="text-muted small mb-2">
-                {new Date(event.startDate).toLocaleDateString()}
+                {event.startDate ? new Date(event.startDate).toLocaleDateString() : 'No date set'}
             </Card.Text>
             <Card.Text className="text-truncate">
-                {event.description}
+                {event.description || 'No description'}
             </Card.Text>
         </Card.Body>
         <Card.Footer className="bg-white border-top-0 d-flex justify-content-between gap-2">
-            <Link to={`/event/${event._id}/details`} className="btn btn-outline-primary btn-sm flex-grow-1">📋 Details</Link>
-            <Link to={`/event/${event._id}/analytics`} className="btn btn-dark btn-sm flex-grow-1">📊 Analytics</Link>
+            {isDraft ? (
+                <>
+                    <Link to={`/create-event?edit=${event._id}`} className="btn btn-warning btn-sm flex-grow-1">✏️ Edit Draft</Link>
+                    <Link to={`/event/${event._id}/details`} className="btn btn-outline-secondary btn-sm flex-grow-1">👁️ View</Link>
+                </>
+            ) : (
+                <>
+                    <Link to={`/event/${event._id}/details`} className="btn btn-outline-primary btn-sm flex-grow-1">📋 Details</Link>
+                    <Link to={`/event/${event._id}/analytics`} className="btn btn-dark btn-sm flex-grow-1">📊 Analytics</Link>
+                </>
+            )}
         </Card.Footer>
     </Card>
 );
 
 const getStatusVariant = (status) => {
     switch (status) {
+        case 'Draft': return 'warning';
+        case 'Published': return 'primary';
         case 'Scheduled': return 'success';
         case 'Ongoing': return 'danger';
         case 'Completed': return 'secondary';
         case 'Cancelled': return 'dark';
+        case 'Closed': return 'dark';
         default: return 'secondary';
     }
 };
